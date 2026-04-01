@@ -98,6 +98,74 @@ export async function submitPublicInquiry(orgSlug: string, formData: FormData) {
   return { success: true };
 }
 
+export async function createManualInquiry(formData: FormData) {
+  const userData = await getUser();
+  if (!userData?.orgId) return { error: "Not authenticated" };
+
+  const supabase = await createClient();
+  const name = formData.get("name") as string;
+  const email = formData.get("email") as string;
+
+  // Create or find client
+  let clientId: string;
+  if (email) {
+    const { data: existing } = await supabase
+      .from("clients")
+      .select("id")
+      .eq("org_id", userData.orgId)
+      .eq("email", email)
+      .single();
+
+    if (existing) {
+      clientId = existing.id;
+    } else {
+      const { data: newClient } = await supabase
+        .from("clients")
+        .insert({
+          org_id: userData.orgId,
+          name,
+          email,
+          phone: formData.get("phone") as string,
+        })
+        .select("id")
+        .single();
+      if (!newClient) return { error: "Failed to create client" };
+      clientId = newClient.id;
+    }
+  } else {
+    const { data: newClient } = await supabase
+      .from("clients")
+      .insert({
+        org_id: userData.orgId,
+        name,
+        phone: formData.get("phone") as string,
+      })
+      .select("id")
+      .single();
+    if (!newClient) return { error: "Failed to create client" };
+    clientId = newClient.id;
+  }
+
+  // Create inquiry
+  const { data: inquiry, error } = await supabase
+    .from("inquiries")
+    .insert({
+      org_id: userData.orgId,
+      client_id: clientId,
+      event_type: formData.get("event_type") as string,
+      event_date: (formData.get("event_date") as string) || null,
+      location: formData.get("location") as string,
+      budget: formData.get("budget") ? Number(formData.get("budget")) : null,
+      message: formData.get("message") as string,
+    })
+    .select("id")
+    .single();
+
+  if (error) return { error: error.message };
+  revalidatePath("/dashboard/inquiries");
+  return { success: true, id: inquiry.id, clientId };
+}
+
 export async function updateInquiryStatus(id: string, status: string) {
   const supabase = await createClient();
   const { error } = await supabase
