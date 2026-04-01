@@ -7,9 +7,10 @@ import { getFreelancerBookings } from "@/actions/crew";
 import { getUser } from "@/lib/supabase/get-user";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, FileText, Send, DollarSign, MapPin, Clock } from "lucide-react";
+import { Calendar, FileText, Send, DollarSign, MapPin, Clock, Link2 } from "lucide-react";
 import { format } from "date-fns";
 import Link from "next/link";
+import { ShareInquiryLink } from "@/components/dashboard/share-inquiry-link";
 
 export default async function DashboardPage() {
   const userData = await getUser();
@@ -132,6 +133,9 @@ export default async function DashboardPage() {
           </Card>
         ))}
       </div>
+
+      {/* Share Inquiry Form */}
+      <ShareInquiryLink slug={userData?.organization?.slug || ""} />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Upcoming Bookings */}
