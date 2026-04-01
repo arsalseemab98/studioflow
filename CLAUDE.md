@@ -24,8 +24,20 @@ Multi-tenant SaaS for photographers, wedding planners, and event planners. Each 
 - Multi-tenant: organization-based with Supabase RLS isolation
 - Token-based public access for clients (no login required)
 - Role-based dashboards: admin vs freelancer portal
-- State-machine workflow: inquiry → crew assign → contract + price → sign → booking
-- Resend emails at every workflow step (inquiry, contract sent, signed, booking confirmed)
+- Resend emails at every workflow step
+
+## Complete Workflow
+```
+1. Client submits simple inquiry (name, email, event type, multi-day dates/hours)
+2. Studio sends "Details Form" to client (like RK Studios — bride/groom, 3 events, venues, times)
+3. Client fills detailed form → studio reviews answers
+4. Studio assigns crew (photographer + videographer)
+5. Studio creates contract → selects template → MUST enter price
+6. Client receives email with signing link → signs digitally
+7. Booking auto-created (confirmed, with price/date/location from contract)
+8. Both parties get email confirmations
+9. Freelancers log in → see only their assigned bookings
+```
 
 ## How to Run
 ```bash
@@ -45,7 +57,7 @@ Required in `.env.local`:
 
 ## Key Directories
 ```
-src/actions/       Server Actions (one file per domain: clients, bookings, crew, contracts, etc.)
+src/actions/       Server Actions (clients, bookings, crew, contracts, inquiries, intake-forms, analytics, dashboard)
 src/app/           Pages and routes (22+ routes)
 src/components/    UI components (layout, dashboard, forms, contracts)
 src/lib/           Utilities (supabase clients, email templates)
@@ -58,7 +70,7 @@ docs/plans/        Design docs and implementation plans
 organizations, profiles, org_members, clients, inquiries, intake_forms, intake_responses, contract_templates, contracts, bookings, workflow_logs, recommendations, crew_members, booking_assignments
 
 ## Key Functions
-- `get_user_org_ids()` — SECURITY DEFINER function for RLS policies (fixes self-referencing subquery issue)
+- `get_user_org_ids()` — SECURITY DEFINER function for RLS policies
 - `handle_new_user_complete()` — trigger: creates profile + org + membership on signup
 
 ## Roles
@@ -77,34 +89,42 @@ organizations, profiles, org_members, clients, inquiries, intake_forms, intake_r
 | Contract signed | Studio owner | "X signed the contract!" |
 | Contract signed | Client | "Booking confirmed" + event details |
 
-Emails sent from `onboarding@resend.dev` (Resend free tier). Add custom domain in Resend dashboard for branded emails.
-
 ## Contract Templates
 - **Simple Contract** — basic terms, editable free text
-- **Photography Client Agreement** — full 11-clause professional template (based on RK Studios format): scope, payment (50% retainer), work product (20-week delivery), rescheduling ($250 fee), cancellation (2-week notice), indemnification (6.1-6.11), timeline ($500/hr overtime), permissions, exclusive photographer, copyright/model release, social media license
+- **Photography Client Agreement** — full 11-clause professional template (RK Studios format)
 
-Templates stored in `contract_templates` table. Dynamic fields auto-fill from inquiry data.
+Templates stored in `contract_templates` table. Dynamic fields auto-fill from client/inquiry data. Price is always manual (required).
+
+## Intake Form Templates
+- **Wedding Details Form** — 22 fields: bride/groom names, contact, 3 events (name/date/time/venue/address), notes
+
+## Inquiry Form Features
+- Multi-day events (up to 5 days, each with name/date/hours)
+- Event types: wedding, engagement, portrait, corporate, birthday, other
+- Hours options: 2, 4, 6, 8, 10, 12+
+- Data saved as formatted text in inquiry message
 
 ## Important Notes
 - shadcn/ui uses `@base-ui/react` — NO `asChild` prop
-- Next.js 16: `middleware.ts` is deprecated → should be `proxy.ts` (still using middleware.ts)
+- Next.js 16: `middleware.ts` deprecated → should be `proxy.ts` (still using middleware.ts)
 - All `params` in page components are async: `params: Promise<{ id: string }>`
-- `unknown` type from Supabase joins: use ternary `? ... : null` (not `&&`), cast with `as unknown as Record<>`
+- `unknown` type from Supabase joins: use ternary `? ... : null`, cast with `as unknown as Record<>`
 - Dashboard stats use admin client (bypasses RLS) — safe because getUser() verifies session first
-- RLS uses `get_user_org_ids()` SECURITY DEFINER function — NOT self-referencing subqueries
-- Custom CSS classes: `hero-gradient`, `btn-gradient`, `accent-gradient-text`, `card-gradient-bg`
-- Bookings auto-created on contract signing extract price/date/location from contract JSONB content
+- RLS uses `get_user_org_ids()` SECURITY DEFINER function
+- Contract creation requires price — shows red warning + disabled button without it
+- Inquiry list shows context-aware buttons: "Send Details Form" (new) vs "Send Contract" (contacted)
+- Auto-booking extracts price/date/location/event type from contract JSONB content
+- Custom CSS: `hero-gradient`, `btn-gradient`, `accent-gradient-text`, `card-gradient-bg`
 
 ## Coding Conventions
 - Server Actions in `src/actions/` — one file per domain
 - Use `getUser()` from `src/lib/supabase/get-user.ts` for auth + role checks
-- Use `createAdminClient()` for public/unauthenticated operations (bypasses RLS)
+- Use `createAdminClient()` for public/unauthenticated operations + dashboard stats
 - Use `isFreelancer` from getUser() for role-based rendering
 - Revalidate paths after mutations with `revalidatePath()`
-- Public pages use company branding (name, color, logo) from organizations table
 - Email sending via `src/lib/email.ts` — use template functions, call `sendEmail()`
 
-## Documentation Requirements
+## Documentation
 - **TDD.md** — Update BEFORE, DURING, and AFTER coding
 - **DEVLOG.md** — Date-stamped entries after every session
 - **PROBLEMS.md** — Track known issues and blockers

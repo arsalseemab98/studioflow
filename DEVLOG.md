@@ -8,98 +8,116 @@
 - Scaffolded Next.js 16 project with Tailwind CSS and shadcn/ui
 - Set up Supabase client helpers (browser, server, admin, middleware)
 - Wrote full database schema with 11 tables, indexes, RLS policies, and auto-triggers
-- Built auth pages (login, signup) with Server Actions
-- Built dashboard layout with responsive sidebar and header
-- Built dashboard overview with stat cards, upcoming bookings, recent inquiries
-- Built client CRM (list, search, detail with tabs for bookings/inquiries/contracts)
-- Built public inquiry form at /inquiry/[slug] with auto client creation
-- Built inquiry management with status filters and detail page with actions
-- Built intake form builder with field types (text, textarea, select, date, checkbox, radio)
-- Built public intake form at /form/[token] with dynamic rendering
-- Built contract system: templates, editor, send/view/sign flow
-- Built canvas-based signature pad (touch-friendly)
-- Built booking calendar with monthly grid view and double-booking prevention
-- Built analytics dashboard with revenue chart, funnel, event types, top clients
-- Built recommendations page with location/pose suggestions filtered by event type
-- Built organization settings with profile, org, and team tabs
-- Built premium landing page with hero, features grid, workflow steps, CTA
-- Added error boundaries, loading states, and 404 page
-- Seeded 15 recommendations (locations + poses)
-- Build passes successfully — 21 routes, 66 files, 7,357 lines
+- Built auth, dashboard, clients, inquiries, intake forms, contracts, bookings, analytics, recommendations, settings, landing page
+- 21 routes, 66 files, 7,357 lines
 
 ### Decisions
-- Chose monolithic Next.js + Supabase (fastest to ship, simplest infra)
-- Used database state machine for workflow instead of Vercel Workflow (simpler for v1)
-- Used canvas-based signature instead of third-party lib (lighter, no deps)
-- Used Recharts for analytics (best React chart library for our needs)
-- No Stripe integration yet (free launch, monetize later)
+- Monolithic Next.js + Supabase (fastest to ship)
+- Database state machine for workflow
+- Canvas-based signature (no deps)
+- Recharts for analytics
 
-### Problems encountered
-- shadcn/ui v4 uses @base-ui/react instead of Radix — no `asChild` prop
-- Next.js 16 deprecates middleware.ts in favor of proxy.ts (kept middleware.ts for now)
-- Recharts Tooltip formatter type is strict — needed to use `Number(v)` cast
-- Supabase join type casting needed `as unknown as Record<>` for nested relations
+### Problems
+- shadcn/ui v4 uses @base-ui/react — no `asChild` prop
+- Next.js 16 deprecates middleware.ts
+- Recharts Tooltip formatter type strict
+- Supabase join type casting issues
 
 ---
 
-## 2026-04-01 — Supabase, Design, Crew, Multi-Tenant Branding
+## 2026-04-01 — Full Feature Build + Testing
 
 ### What was done
 
-**Supabase Setup**
+**Supabase & Deployment**
 - Created Supabase project "studioflow" in us-east-1
-- Applied full schema migration (001_initial_schema) via MCP
-- Seeded 15 recommendations
-- Fixed signup trigger: combined handle_new_user + handle_new_org into single trigger to avoid FK ordering issue
-- Created demo user (demo@studioflow.app / Demo123456!)
+- Applied schema, seeded recommendations, created demo user
+- Fixed signup trigger (combined into single function)
+- Deployed to Vercel (studioflow-sage.vercel.app)
+- Set all env vars via Vercel CLI
 
-**Design Theme — Warm Gradient (Design 3)**
-- Generated 3 landing page designs using superdesign MCP
-- User chose Design 3: warm gradient (purple hero, orange-to-pink buttons)
-- Applied theme to entire app: CSS variables, landing page, auth pages, sidebar
-- Switched font from Geist to DM Sans
-- Added custom CSS: hero-gradient, btn-gradient, accent-gradient-text, card-gradient-bg
-- Landing page now has: hero, features (4 cards), workflow steps, testimonials (3), pricing (3 tiers), CTA
+**Design Theme (Warm Gradient)**
+- Generated 3 designs via superdesign MCP, user chose Design 3
+- Applied purple hero gradient, orange-to-pink buttons, DM Sans font
+- Themed auth pages, sidebar, landing page
 
 **Crew Management & Booking Pipeline**
 - New tables: crew_members, booking_assignments (migration 002)
-- Crew page at /dashboard/crew: add/edit/delete team + external freelancers
-- Invite freelancers: creates Supabase auth user with "freelancer" role
-- Enhanced inquiry detail: pipeline status bar (Submitted → Crew Assigned → Contract Sent → Booked)
-- Crew assignment panel on inquiry detail: pick photographers and videographers
-- Enhanced contract creation: pre-fills from inquiry data, manual price entry, budget hint
-- Enhanced booking detail: shows assigned crew with role badges, add/remove crew
-- Added "Crew" to sidebar navigation
-
-**Freelancer Portal**
-- New role: "freelancer" in org_members
-- FreelancerSidebar component (My Bookings + Settings only)
-- Dashboard page detects role and shows freelancer view (only their assigned bookings)
-- RLS policies: freelancers can only see bookings they're assigned to
-- Booking cards show date, location, time, client name, their role
+- Crew page with team + external freelancers, invite system
+- Enhanced inquiry detail: 5-step pipeline, crew assignment panel
+- Enhanced contract creation: pre-fill from inquiry, manual price, template selection
+- Enhanced booking detail: assigned crew display
+- Freelancer portal: limited sidebar, only their bookings
 
 **Multi-Tenant Company Branding**
-- New org fields: description, website, email, phone, address, primary_color, industry (migration 003)
-- Enhanced settings page with Company tab: full branding form with color picker
-- Public inquiry form shows company: logo (brand color), name, description, contact info
-- Brand color applied to public form buttons dynamically
-- "Powered by StudioFlow" footer on public pages
-- Public Links tab in settings with inquiry URL and slug
+- Added org fields: description, website, email, phone, address, brand color, industry (migration 003)
+- Settings page with Company tab, brand color picker
+- Public forms show company branding dynamically
 
-**Deployment**
-- Pushed to GitHub (arsalseemab98/studioflow)
-- Deployed to Vercel (studioflow-sage.vercel.app)
-- Set all env vars via Vercel CLI
-- Multiple successful production deploys
+**RLS Fix (Critical)**
+- Self-referencing org_members subqueries caused empty results
+- Created `get_user_org_ids()` SECURITY DEFINER function (migration 004)
+- Updated all 13 table policies
+- Dashboard stats switched to admin client for bookings
+
+**Email Integration (Resend)**
+- Wired Resend API for all workflow steps
+- 4 email templates: inquiry received, contract sent, contract signed, booking confirmed
+- Beautiful HTML emails with gradient accents
+
+**Contract Templates**
+- Created "Photography Client Agreement" from RK Studios PDF (11 clauses, 22 sections)
+- Template selector on contract creation page
+- Auto-fill fields from client/inquiry data (read-only)
+- Price field manual + required (red warning without it)
+- Signing link now clickable with copy + open buttons
+
+**Details Form Flow**
+- Created "Wedding Details Form" intake template (22 fields: couple, 3 events, venues)
+- "Send Details Form" step on inquiry detail page
+- Pick form template → generate link → send to client
+- Pipeline: Inquiry → Details Form → Crew → Contract → Booked
+- "Send Details Form" quick button on inquiries list for "new" status
+
+**Inquiry Form Enhancements**
+- Simplified form: name, email, phone, event type, multi-day, venue, notes
+- Removed budget field (studio sets price)
+- Multi-day events: up to 5 days, each with event name + date + hours
+- "Add another day" button
+- Data formatted as "Day 1 (Ceremony): 2026-07-15 — 8 hours"
+
+**Share Inquiry Link**
+- Dashboard card with copy link + email button
+- Email opens mail client with pre-written message
+- Manual inquiry creation from dashboard
+
+**Bug Fixes**
+- Auto-booking now extracts price/date/location from contract JSONB
+- Booking title uses "Client Name — event type"
+- Booking status set to "confirmed" (was "tentative")
+- Dashboard Total Bookings counts non-cancelled (was only confirmed/completed)
+- Fixed signing link breaking across lines (now Input + Copy + Open buttons)
+
+### Browser Testing (13 tests passed)
+- Login → Dashboard → Inquiries → Inquiry Detail → Pipeline
+- Public inquiry form submit → "Inquiry Submitted!"
+- Contract creation pre-fill → Contract preview → Send to client
+- Signing link → Public contract view → Signature pad → "Contract Signed!"
+- Auto-booking created with correct data
+- Dashboard stats: 1 booking, 1 inquiry, 1 contract, $5,000 revenue
 
 ### Decisions
-- Combined two signup triggers into one to fix FK ordering issue
-- Used role-based rendering (isFreelancer) instead of separate routes
-- Kept crew assignment client-side state for now (not persisted until booking created)
-- Manual price entry chosen over package-based pricing (simpler for v1)
-- Company brand color applied via inline styles on public pages (dynamic per org)
+- Combined two signup triggers into one (FK ordering)
+- Used admin client for dashboard stats (RLS issues with bookings)
+- Manual price only (no package-based pricing for v1)
+- Details form before contract (not optional)
+- Inquiry list buttons change based on status (details form vs contract)
 
-### Problems encountered
-- Supabase signup failed due to two separate triggers with FK dependency — fixed by combining into one
-- `unknown` type from Supabase joins can't use `&&` in JSX — must use ternary `? : null`
-- React rendering `unknown` types causes TypeScript errors — need explicit `as string` casts
+### Problems Encountered & Fixed
+- RLS self-referencing subquery → SECURITY DEFINER function
+- Supabase join `unknown` type in JSX → ternary instead of &&
+- Dashboard stats empty → switched to admin client
+- Two booking RLS policies conflicting → merged into one
+- Signing link breaking across lines → Input + Copy + Open buttons
+- Auto-booking price/date was wrong → extract from contract JSONB
+- Contract template fields not auto-filling → re-fill on client change
