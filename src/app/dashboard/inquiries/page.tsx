@@ -26,15 +26,18 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, FileText, ClipboardList } from "lucide-react";
+import {
+  Plus,
+  FileText,
+  ClipboardList,
+  Circle,
+  CheckCircle2,
+  Clock,
+  Send,
+  CalendarCheck,
+  Archive,
+} from "lucide-react";
 import { format } from "date-fns";
-
-const statusColors: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-  new: "default",
-  contacted: "secondary",
-  converted: "outline",
-  archived: "destructive",
-};
 
 export default function InquiriesPage() {
   const router = useRouter();
@@ -161,30 +164,31 @@ export default function InquiriesPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Client</TableHead>
-                <TableHead>Event Type</TableHead>
+                <TableHead>Event</TableHead>
                 <TableHead>Date</TableHead>
                 <TableHead>Location</TableHead>
-                <TableHead>Budget</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead></TableHead>
+                <TableHead>Next Step</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-zinc-500">
+                  <TableCell colSpan={6} className="text-center py-8 text-zinc-500">
                     Loading...
                   </TableCell>
                 </TableRow>
               ) : inquiries.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-zinc-500">
+                  <TableCell colSpan={6} className="text-center py-8 text-zinc-500">
                     No inquiries
                   </TableCell>
                 </TableRow>
               ) : (
-                inquiries.map((inq) => (
-                  <TableRow key={inq.id as string}>
+                inquiries.map((inq) => {
+                  const status = inq.status as string;
+                  return (
+                  <TableRow key={inq.id as string} className="group">
                     <TableCell>
                       <Link
                         href={`/dashboard/inquiries/${inq.id}`}
@@ -193,49 +197,67 @@ export default function InquiriesPage() {
                         {(inq.clients as Record<string, string>)?.name || "Unknown"}
                       </Link>
                     </TableCell>
-                    <TableCell className="capitalize">
+                    <TableCell className="capitalize text-zinc-600">
                       {inq.event_type as string}
                     </TableCell>
-                    <TableCell className="text-zinc-500">
+                    <TableCell className="text-zinc-500 text-sm">
                       {inq.event_date
                         ? format(new Date(inq.event_date as string), "MMM d, yyyy")
                         : "—"}
                     </TableCell>
-                    <TableCell className="text-zinc-500">
+                    <TableCell className="text-zinc-500 text-sm">
                       {(inq.location as string) || "—"}
                     </TableCell>
-                    <TableCell className="text-zinc-500">
-                      {inq.budget ? `$${Number(inq.budget).toLocaleString()}` : "—"}
+                    <TableCell>
+                      {status === "new" ? (
+                        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-orange-600">
+                          <Circle className="h-3 w-3 fill-orange-400 text-orange-400" />
+                          New
+                        </span>
+                      ) : status === "contacted" ? (
+                        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-blue-600">
+                          <Clock className="h-3 w-3" />
+                          Details Received
+                        </span>
+                      ) : status === "converted" ? (
+                        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-green-600">
+                          <CheckCircle2 className="h-3 w-3" />
+                          Booked
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-zinc-400">
+                          <Archive className="h-3 w-3" />
+                          Archived
+                        </span>
+                      )}
                     </TableCell>
                     <TableCell>
-                      <Badge variant={statusColors[inq.status as string] || "secondary"}>
-                        {inq.status as string}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        {inq.status === "new" && (
-                          <Link href={`/dashboard/inquiries/${inq.id}`}>
-                            <Button variant="outline" size="sm" className="text-xs border-orange-200 text-orange-600 hover:bg-orange-50">
-                              <ClipboardList className="h-3 w-3 mr-1" />
-                              Send Details Form
-                            </Button>
-                          </Link>
-                        )}
-                        {inq.status === "contacted" && (
-                          <Link
-                            href={`/dashboard/contracts/new?inquiry=${inq.id}&client=${inq.client_id}&event_type=${inq.event_type}&event_date=${inq.event_date || ""}&location=${inq.location || ""}&budget=${inq.budget || ""}`}
-                          >
-                            <Button variant="outline" size="sm" className="text-xs">
-                              <FileText className="h-3 w-3 mr-1" />
-                              Send Contract
-                            </Button>
-                          </Link>
-                        )}
-                      </div>
+                      {status === "new" ? (
+                        <Link href={`/dashboard/inquiries/${inq.id}`}>
+                          <Button variant="outline" size="sm" className="text-xs border-orange-200 text-orange-600 hover:bg-orange-50">
+                            <Send className="h-3 w-3 mr-1" />
+                            Send Details Form
+                          </Button>
+                        </Link>
+                      ) : status === "contacted" ? (
+                        <Link
+                          href={`/dashboard/contracts/new?inquiry=${inq.id}&client=${inq.client_id}&event_type=${inq.event_type}&event_date=${inq.event_date || ""}&location=${inq.location || ""}&budget=${inq.budget || ""}`}
+                        >
+                          <Button variant="outline" size="sm" className="text-xs">
+                            <FileText className="h-3 w-3 mr-1" />
+                            Send Contract
+                          </Button>
+                        </Link>
+                      ) : status === "converted" ? (
+                        <span className="text-xs text-green-500 flex items-center gap-1">
+                          <CalendarCheck className="h-3 w-3" />
+                          Complete
+                        </span>
+                      ) : null}
                     </TableCell>
                   </TableRow>
-                ))
+                  );
+                })
               )}
             </TableBody>
           </Table>
