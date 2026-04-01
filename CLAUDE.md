@@ -14,7 +14,7 @@ Multi-tenant SaaS for photographers, wedding planners, and event planners. Each 
 - **Backend:** Supabase (Auth, Postgres, Storage, Realtime)
 - **Font:** DM Sans (Google Fonts)
 - **Theme:** Warm gradient (purple hero, orange-to-pink accents)
-- **Email:** Resend (transactional emails — not yet wired)
+- **Email:** Resend (transactional emails — fully wired)
 - **Charts:** Recharts
 - **PDF:** @react-pdf/renderer (not yet wired)
 - **Deployment:** Vercel
@@ -25,6 +25,7 @@ Multi-tenant SaaS for photographers, wedding planners, and event planners. Each 
 - Token-based public access for clients (no login required)
 - Role-based dashboards: admin vs freelancer portal
 - State-machine workflow: inquiry → crew assign → contract + price → sign → booking
+- Resend emails at every workflow step (inquiry, contract sent, signed, booking confirmed)
 
 ## How to Run
 ```bash
@@ -39,22 +40,26 @@ Required in `.env.local`:
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY` (server-only, bypasses RLS for public forms)
-- `RESEND_API_KEY`
+- `RESEND_API_KEY` (server-only, sends transactional emails)
 - `NEXT_PUBLIC_APP_URL`
 
 ## Key Directories
 ```
-src/actions/       Server Actions (one file per domain: clients, bookings, crew, etc.)
-src/app/           Pages and routes (22 routes)
+src/actions/       Server Actions (one file per domain: clients, bookings, crew, contracts, etc.)
+src/app/           Pages and routes (22+ routes)
 src/components/    UI components (layout, dashboard, forms, contracts)
-src/lib/supabase/  Supabase client helpers (client, server, admin, middleware, get-user)
+src/lib/           Utilities (supabase clients, email templates)
 src/types/         TypeScript types (database.ts)
-supabase/          SQL migrations (001-003)
+supabase/          SQL migrations (001-004)
 docs/plans/        Design docs and implementation plans
 ```
 
-## Database Tables (13 total)
+## Database Tables (15 total)
 organizations, profiles, org_members, clients, inquiries, intake_forms, intake_responses, contract_templates, contracts, bookings, workflow_logs, recommendations, crew_members, booking_assignments
+
+## Key Functions
+- `get_user_org_ids()` — SECURITY DEFINER function for RLS policies (fixes self-referencing subquery issue)
+- `handle_new_user_complete()` — trigger: creates profile + org + membership on signup
 
 ## Roles
 | Role | Access |
@@ -64,13 +69,31 @@ organizations, profiles, org_members, clients, inquiries, intake_forms, intake_r
 | member | Full access to data |
 | freelancer | Only sees their assigned bookings (limited portal) |
 
+## Email Workflow (Resend)
+| Trigger | Recipient | Template |
+|---------|-----------|----------|
+| Inquiry submitted | Studio owner | "New inquiry from X" |
+| Contract sent | Client | "Contract to sign" + signing link |
+| Contract signed | Studio owner | "X signed the contract!" |
+| Contract signed | Client | "Booking confirmed" + event details |
+
+Emails sent from `onboarding@resend.dev` (Resend free tier). Add custom domain in Resend dashboard for branded emails.
+
+## Contract Templates
+- **Simple Contract** — basic terms, editable free text
+- **Photography Client Agreement** — full 11-clause professional template (based on RK Studios format): scope, payment (50% retainer), work product (20-week delivery), rescheduling ($250 fee), cancellation (2-week notice), indemnification (6.1-6.11), timeline ($500/hr overtime), permissions, exclusive photographer, copyright/model release, social media license
+
+Templates stored in `contract_templates` table. Dynamic fields auto-fill from inquiry data.
+
 ## Important Notes
 - shadcn/ui uses `@base-ui/react` — NO `asChild` prop
 - Next.js 16: `middleware.ts` is deprecated → should be `proxy.ts` (still using middleware.ts)
 - All `params` in page components are async: `params: Promise<{ id: string }>`
-- `unknown` type from Supabase joins can't use `&&` in JSX — use ternary `? ... : null` instead
-- Database migrations: `supabase/migrations/001-003`
+- `unknown` type from Supabase joins: use ternary `? ... : null` (not `&&`), cast with `as unknown as Record<>`
+- Dashboard stats use admin client (bypasses RLS) — safe because getUser() verifies session first
+- RLS uses `get_user_org_ids()` SECURITY DEFINER function — NOT self-referencing subqueries
 - Custom CSS classes: `hero-gradient`, `btn-gradient`, `accent-gradient-text`, `card-gradient-bg`
+- Bookings auto-created on contract signing extract price/date/location from contract JSONB content
 
 ## Coding Conventions
 - Server Actions in `src/actions/` — one file per domain
@@ -79,6 +102,7 @@ organizations, profiles, org_members, clients, inquiries, intake_forms, intake_r
 - Use `isFreelancer` from getUser() for role-based rendering
 - Revalidate paths after mutations with `revalidatePath()`
 - Public pages use company branding (name, color, logo) from organizations table
+- Email sending via `src/lib/email.ts` — use template functions, call `sendEmail()`
 
 ## Documentation Requirements
 - **TDD.md** — Update BEFORE, DURING, and AFTER coding
