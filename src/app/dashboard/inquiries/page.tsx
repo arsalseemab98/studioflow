@@ -26,7 +26,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, FileText } from "lucide-react";
+import { Plus, FileText, ClipboardList } from "lucide-react";
 import { format } from "date-fns";
 
 const statusColors: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
@@ -213,16 +213,26 @@ export default function InquiriesPage() {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      {(inq.status === "new" || inq.status === "contacted") && (
-                        <Link
-                          href={`/dashboard/contracts/new?inquiry=${inq.id}&client=${inq.client_id}&event_type=${inq.event_type}&event_date=${inq.event_date || ""}&location=${inq.location || ""}&budget=${inq.budget || ""}`}
-                        >
-                          <Button variant="outline" size="sm" className="text-xs">
-                            <FileText className="h-3 w-3 mr-1" />
-                            Send Contract
-                          </Button>
-                        </Link>
-                      )}
+                      <div className="flex items-center gap-2">
+                        {inq.status === "new" && (
+                          <Link href={`/dashboard/inquiries/${inq.id}`}>
+                            <Button variant="outline" size="sm" className="text-xs border-orange-200 text-orange-600 hover:bg-orange-50">
+                              <ClipboardList className="h-3 w-3 mr-1" />
+                              Send Details Form
+                            </Button>
+                          </Link>
+                        )}
+                        {inq.status === "contacted" && (
+                          <Link
+                            href={`/dashboard/contracts/new?inquiry=${inq.id}&client=${inq.client_id}&event_type=${inq.event_type}&event_date=${inq.event_date || ""}&location=${inq.location || ""}&budget=${inq.budget || ""}`}
+                          >
+                            <Button variant="outline" size="sm" className="text-xs">
+                              <FileText className="h-3 w-3 mr-1" />
+                              Send Contract
+                            </Button>
+                          </Link>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))
