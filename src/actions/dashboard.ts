@@ -1,14 +1,24 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { getUser } from "@/lib/supabase/get-user";
 
 export async function getDashboardStats() {
-  const userData = await getUser();
-  if (!userData?.orgId) return null;
-
   const supabase = await createClient();
-  const orgId = userData.orgId;
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  // Get org_id
+  const { data: membership } = await supabase
+    .from("org_members")
+    .select("org_id")
+    .eq("user_id", user.id)
+    .single();
+
+  if (!membership) return null;
+  const orgId = membership.org_id;
 
   const [bookings, inquiries, contracts, revenue] = await Promise.all([
     supabase
@@ -34,7 +44,7 @@ export async function getDashboardStats() {
   ]);
 
   const totalRevenue =
-    revenue.data?.reduce((sum, b) => sum + (b.total_price || 0), 0) || 0;
+    revenue.data?.reduce((sum, b) => sum + (Number(b.total_price) || 0), 0) || 0;
 
   return {
     totalBookings: bookings.count || 0,
@@ -45,17 +55,29 @@ export async function getDashboardStats() {
 }
 
 export async function getUpcomingBookings() {
-  const userData = await getUser();
-  if (!userData?.orgId) return [];
-
   const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  const { data: membership } = await supabase
+    .from("org_members")
+    .select("org_id")
+    .eq("user_id", user.id)
+    .single();
+
+  if (!membership) return [];
+
   const today = new Date().toISOString().split("T")[0];
 
   const { data } = await supabase
     .from("bookings")
     .select("*, clients(name, email)")
-    .eq("org_id", userData.orgId)
+    .eq("org_id", membership.org_id)
     .gte("event_date", today)
+    .neq("status", "cancelled")
     .order("event_date", { ascending: true })
     .limit(5);
 
@@ -63,15 +85,25 @@ export async function getUpcomingBookings() {
 }
 
 export async function getRecentInquiries() {
-  const userData = await getUser();
-  if (!userData?.orgId) return [];
-
   const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  const { data: membership } = await supabase
+    .from("org_members")
+    .select("org_id")
+    .eq("user_id", user.id)
+    .single();
+
+  if (!membership) return [];
 
   const { data } = await supabase
     .from("inquiries")
     .select("*, clients(name, email)")
-    .eq("org_id", userData.orgId)
+    .eq("org_id", membership.org_id)
     .order("created_at", { ascending: false })
     .limit(5);
 
