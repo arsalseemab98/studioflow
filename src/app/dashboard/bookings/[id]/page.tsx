@@ -1,9 +1,12 @@
 import { getBooking, updateBookingStatus } from "@/actions/bookings";
+import { getBookingAssignments, getCrewMembers, assignCrew, unassignCrew } from "@/actions/crew";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { notFound } from "next/navigation";
+import { Camera, Video, UserPlus } from "lucide-react";
+import { BookingCrewPanel } from "@/components/dashboard/booking-crew-panel";
 
 export default async function BookingDetailPage({
   params,
@@ -11,7 +14,11 @@ export default async function BookingDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const booking = await getBooking(id);
+  const [booking, assignments, crew] = await Promise.all([
+    getBooking(id),
+    getBookingAssignments(id),
+    getCrewMembers(),
+  ]);
 
   if (!booking) notFound();
 
@@ -40,7 +47,14 @@ export default async function BookingDetailPage({
             {format(new Date(booking.event_date), "MMMM d, yyyy")}
           </p>
         </div>
-        <Badge variant={booking.status === "confirmed" ? "default" : "secondary"}>
+        <Badge
+          className={
+            booking.status === "confirmed"
+              ? "btn-gradient text-white border-0"
+              : ""
+          }
+          variant={booking.status === "confirmed" ? "default" : "secondary"}
+        >
           {booking.status}
         </Badge>
       </div>
@@ -72,10 +86,19 @@ export default async function BookingDetailPage({
           </div>
           <div>
             <p className="text-zinc-500">Price</p>
-            <p className="font-medium">${Number(booking.total_price).toLocaleString()}</p>
+            <p className="font-medium text-orange-600">
+              ${Number(booking.total_price).toLocaleString()}
+            </p>
           </div>
         </CardContent>
       </Card>
+
+      {/* Assigned Crew */}
+      <BookingCrewPanel
+        bookingId={id}
+        assignments={assignments}
+        crew={crew}
+      />
 
       {booking.notes && (
         <Card>
@@ -95,7 +118,9 @@ export default async function BookingDetailPage({
         <CardContent className="flex flex-wrap gap-3">
           {booking.status === "tentative" && (
             <form action={confirm}>
-              <Button type="submit">Confirm Booking</Button>
+              <Button type="submit" className="btn-gradient text-white border-0">
+                Confirm Booking
+              </Button>
             </form>
           )}
           {booking.status === "confirmed" && (

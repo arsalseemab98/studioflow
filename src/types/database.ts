@@ -136,6 +136,31 @@ export type Booking = {
   clients?: Client;
 };
 
+export type CrewRole = "photographer" | "videographer" | "assistant" | "other";
+
+export type CrewMember = {
+  id: string;
+  org_id: string;
+  user_id: string | null;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  role: CrewRole;
+  type: "team" | "external";
+  notes: string | null;
+  created_at: string;
+};
+
+export type BookingAssignment = {
+  id: string;
+  booking_id: string;
+  crew_member_id: string;
+  role: CrewRole;
+  notes: string | null;
+  created_at: string;
+  crew_members?: CrewMember;
+};
+
 export type WorkflowLog = {
   id: string;
   org_id: string;

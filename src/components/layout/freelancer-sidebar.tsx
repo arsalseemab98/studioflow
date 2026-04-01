@@ -2,43 +2,21 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  LayoutDashboard,
-  Calendar,
-  FileText,
-  Users,
-  ClipboardList,
-  BarChart3,
-  Lightbulb,
-  Settings,
-  Menu,
-  X,
-  Send,
-  UserCog,
-} from "lucide-react";
+import { Calendar, Settings, Menu, X } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
-  { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
-  { href: "/dashboard/bookings", label: "Bookings", icon: Calendar },
-  { href: "/dashboard/inquiries", label: "Inquiries", icon: Send },
-  { href: "/dashboard/contracts", label: "Contracts", icon: FileText },
-  { href: "/dashboard/clients", label: "Clients", icon: Users },
-  { href: "/dashboard/crew", label: "Crew", icon: UserCog },
-  { href: "/dashboard/forms", label: "Intake Forms", icon: ClipboardList },
-  { href: "/dashboard/analytics", label: "Analytics", icon: BarChart3 },
-  { href: "/dashboard/recommendations", label: "Suggestions", icon: Lightbulb },
+  { href: "/dashboard", label: "My Bookings", icon: Calendar },
   { href: "/dashboard/settings", label: "Settings", icon: Settings },
 ];
 
-export function Sidebar() {
+export function FreelancerSidebar() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
   return (
     <>
-      {/* Mobile toggle */}
       <button
         onClick={() => setOpen(!open)}
         className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-white dark:bg-zinc-900 rounded-md shadow-md"
@@ -46,7 +24,6 @@ export function Sidebar() {
         {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
       </button>
 
-      {/* Overlay */}
       {open && (
         <div
           className="lg:hidden fixed inset-0 bg-black/50 z-30"
@@ -54,7 +31,6 @@ export function Sidebar() {
         />
       )}
 
-      {/* Sidebar */}
       <aside
         className={cn(
           "fixed lg:static inset-y-0 left-0 z-40 w-64 bg-white dark:bg-zinc-900 border-r border-zinc-200 dark:border-zinc-800 transform transition-transform lg:translate-x-0",
@@ -66,7 +42,7 @@ export function Sidebar() {
             <div className="w-7 h-7 btn-gradient rounded-lg" />
             <h1 className="text-xl font-bold tracking-tight">StudioFlow</h1>
           </div>
-          <p className="text-xs text-zinc-500 mt-1">Manage your studio</p>
+          <p className="text-xs text-zinc-500 mt-1">Freelancer Portal</p>
         </div>
         <nav className="px-3 space-y-1">
           {navItems.map((item) => {
@@ -82,7 +58,7 @@ export function Sidebar() {
                 className={cn(
                   "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
                   isActive
-                    ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
+                    ? "bg-orange-50 text-orange-700"
                     : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
                 )}
               >

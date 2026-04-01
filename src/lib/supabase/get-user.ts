@@ -26,6 +26,7 @@ export async function getUser() {
     profile: profile as Profile | null,
     organization: membership?.organizations as Organization | null,
     orgId: membership?.org_id as string | null,
-    role: membership?.role as "owner" | "admin" | "member" | null,
+    role: membership?.role as "owner" | "admin" | "member" | "freelancer" | null,
+    isFreelancer: membership?.role === "freelancer",
   };
 }

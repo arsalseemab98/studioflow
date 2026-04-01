@@ -3,13 +3,86 @@ import {
   getUpcomingBookings,
   getRecentInquiries,
 } from "@/actions/dashboard";
+import { getFreelancerBookings } from "@/actions/crew";
+import { getUser } from "@/lib/supabase/get-user";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, FileText, Send, DollarSign } from "lucide-react";
+import { Calendar, FileText, Send, DollarSign, MapPin, Clock } from "lucide-react";
 import { format } from "date-fns";
 import Link from "next/link";
 
 export default async function DashboardPage() {
+  const userData = await getUser();
+
+  // Freelancer view
+  if (userData?.isFreelancer) {
+    const myBookings = await getFreelancerBookings();
+    return (
+      <div className="space-y-6">
+        <h1 className="text-2xl font-bold">My Bookings</h1>
+        {myBookings.length === 0 ? (
+          <Card>
+            <CardContent className="py-12 text-center text-zinc-500">
+              No bookings assigned to you yet.
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {myBookings.map((a: Record<string, unknown>) => {
+              const booking = a.bookings as Record<string, unknown>;
+              const client = booking?.clients as Record<string, string>;
+              return (
+                <Card key={a.id as string}>
+                  <CardContent className="pt-6">
+                    <div className="flex items-start justify-between mb-3">
+                      <div>
+                        <p className="font-semibold">{booking?.title as string}</p>
+                        <p className="text-sm text-zinc-500">{client?.name}</p>
+                      </div>
+                      <Badge variant="secondary" className="capitalize">
+                        {a.role as string}
+                      </Badge>
+                    </div>
+                    <div className="space-y-1.5 text-sm text-zinc-500">
+                      <p className="flex items-center gap-2">
+                        <Calendar className="h-3.5 w-3.5" />
+                        {booking?.event_date
+                          ? format(new Date(booking.event_date as string), "MMMM d, yyyy")
+                          : "TBD"}
+                      </p>
+                      {booking?.location ? (
+                        <p className="flex items-center gap-2">
+                          <MapPin className="h-3.5 w-3.5" />
+                          {booking.location as string}
+                        </p>
+                      ) : null}
+                      {booking?.start_time ? (
+                        <p className="flex items-center gap-2">
+                          <Clock className="h-3.5 w-3.5" />
+                          {format(new Date(booking.start_time as string), "h:mm a")}
+                          {booking?.end_time
+                            ? ` - ${format(new Date(booking.end_time as string), "h:mm a")}`
+                            : null}
+                        </p>
+                      ) : null}
+                    </div>
+                    <Badge
+                      className="mt-3"
+                      variant={booking?.status === "confirmed" ? "default" : "secondary"}
+                    >
+                      {booking?.status as string}
+                    </Badge>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Regular dashboard
   const [stats, bookings, inquiries] = await Promise.all([
     getDashboardStats(),
     getUpcomingBookings(),
