@@ -28,12 +28,6 @@
 **Impact:** Signed contracts don't have a downloadable PDF.
 **Fix:** Create PDF template component and generate on sign, upload to Supabase Storage.
 
-### P4: Team invite system not functional
-**Severity:** Low
-**Description:** Settings page shows invite UI but button is disabled. No invite flow implemented.
-**Impact:** Can't add team members through the app.
-**Fix:** Implement Supabase auth invite + org_members insertion.
-
 ### P5: No Google Calendar sync
 **Severity:** Low
 **Description:** Bookings only exist in-app, no external calendar sync.
@@ -60,9 +54,27 @@
 
 ### P9: No automated tests
 **Severity:** Medium
-**Description:** TDD.md lists 45 test cases but none are implemented.
+**Description:** TDD.md lists 68 test cases but none are implemented.
 **Impact:** No automated regression testing.
 **Fix:** Set up Vitest for unit tests, Playwright for E2E tests.
+
+### P10: Crew assignment on inquiry not persisted
+**Severity:** Medium
+**Description:** Crew assignment panel on inquiry detail is client-side only. Assignments are stored on bookings but not linked back to inquiries.
+**Impact:** If you assign crew on inquiry and navigate away, assignments are lost until a booking is created.
+**Fix:** Add `inquiry_id` to booking_assignments or create a separate inquiry_assignments table.
+
+### P11: Freelancer password reset flow missing
+**Severity:** Medium
+**Description:** Invited freelancers get a random password. No password reset or magic link flow exists.
+**Impact:** Freelancers can't log in unless admin shares the generated password.
+**Fix:** Use Supabase `inviteUserByEmail()` instead of `createUser()` or add password reset page.
+
+### P12: Logo upload not implemented
+**Severity:** Low
+**Description:** Organizations have a `logo_url` field but no upload UI. Currently using a colored square as placeholder.
+**Impact:** Companies can't upload their actual logo.
+**Fix:** Add file upload to settings using Supabase Storage bucket.
 
 ---
 
@@ -82,3 +94,18 @@
 **Resolved:** 2026-03-31
 **Description:** `b.clients as Record<string, string>` fails type check on array relations.
 **Fix:** Used `as unknown as Record<string, string>` double cast.
+
+### R4: Signup trigger FK ordering issue
+**Resolved:** 2026-04-01
+**Description:** Two separate triggers (handle_new_user + handle_new_org) caused FK violation because org_members.user_id references profiles.id, but profile might not exist yet when the org trigger fires.
+**Fix:** Combined both triggers into single `handle_new_user_complete()` function that creates profile → org → membership in one transaction.
+
+### R5: Team invite not functional
+**Resolved:** 2026-04-01
+**Description:** Settings page had disabled invite button.
+**Fix:** Moved team management to /dashboard/crew with full invite flow for freelancers. Settings now links to crew page.
+
+### R6: Unknown type in JSX conditionals
+**Resolved:** 2026-04-01
+**Description:** `{value && <element>}` fails TypeScript when value is `unknown` because React can't render `unknown`.
+**Fix:** Use ternary: `{value ? <element> : null}` instead of `&&` pattern.
