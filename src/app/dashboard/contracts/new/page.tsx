@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { getClients } from "@/actions/clients";
-import { createContract } from "@/actions/contracts";
+import { createContract, getContractTemplates } from "@/actions/contracts";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,12 +11,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { DollarSign } from "lucide-react";
-import type { Client, ContractBlock } from "@/types/database";
+import type { Client, ContractBlock, ContractTemplate } from "@/types/database";
 
 export default function NewContractPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [clients, setClients] = useState<Client[]>([]);
+  const [templates, setTemplates] = useState<ContractTemplate[]>([]);
+  const [selectedTemplate, setSelectedTemplate] = useState<string>("");
+  const [useTemplate, setUseTemplate] = useState(false);
+  const [templateBlocks, setTemplateBlocks] = useState<ContractBlock[]>([]);
   const [selectedClient, setSelectedClient] = useState(
     searchParams.get("client") || ""
   );
@@ -38,6 +42,7 @@ export default function NewContractPage() {
 
   useEffect(() => {
     loadClients();
+    loadTemplates();
   }, []);
 
   async function loadClients() {
@@ -45,9 +50,72 @@ export default function NewContractPage() {
     setClients(data as Client[]);
   }
 
+  async function loadTemplates() {
+    const data = await getContractTemplates();
+    setTemplates(data as ContractTemplate[]);
+  }
+
+  function selectTemplate(templateId: string) {
+    setSelectedTemplate(templateId);
+    const tmpl = templates.find((t) => t.id === templateId);
+    if (tmpl) {
+      setUseTemplate(true);
+      // Pre-fill field values from inquiry params
+      const blocks = (tmpl.content as ContractBlock[]).map((block) => {
+        if (block.type === "field") {
+          if (block.fieldName === "client_name") {
+            const c = clients.find((cl) => cl.id === selectedClient);
+            return { ...block, fieldValue: c?.name || "" };
+          }
+          if (block.fieldName === "client_email") {
+            const c = clients.find((cl) => cl.id === selectedClient);
+            return { ...block, fieldValue: c?.email || "" };
+          }
+          if (block.fieldName === "client_contact") {
+            const c = clients.find((cl) => cl.id === selectedClient);
+            return { ...block, fieldValue: c?.phone || "" };
+          }
+          if (block.fieldName === "event_date") return { ...block, fieldValue: eventDate };
+          if (block.fieldName === "location") return { ...block, fieldValue: location };
+          if (block.fieldName === "price") return { ...block, fieldValue: price ? `$${Number(price).toLocaleString()}` : "" };
+        }
+        return block;
+      });
+      setTemplateBlocks(blocks);
+    }
+  }
+
+  function updateTemplateField(blockId: string, value: string) {
+    setTemplateBlocks((prev) =>
+      prev.map((b) => (b.id === blockId ? { ...b, fieldValue: value } : b))
+    );
+  }
+
   async function handleCreate() {
     if (!selectedClient || !price) return;
     setSaving(true);
+
+    // Use template blocks if selected, otherwise build simple contract
+    if (useTemplate && templateBlocks.length > 0) {
+      // Update price field in template
+      const finalBlocks = templateBlocks.map((b) => {
+        if (b.type === "field" && b.fieldName === "price" && !b.fieldValue) {
+          return { ...b, fieldValue: `$${Number(price).toLocaleString()}` };
+        }
+        return b;
+      });
+      const result = await createContract(
+        selectedClient,
+        selectedTemplate || null,
+        finalBlocks,
+        inquiryId || undefined
+      );
+      if (result.success && result.id) {
+        router.push(`/dashboard/contracts/${result.id}`);
+      }
+      setSaving(false);
+      return;
+    }
 
     const blocks: ContractBlock[] = [
       {
@@ -107,6 +175,40 @@ export default function NewContractPage() {
   return (
     <div className="space-y-6 max-w-3xl">
       <h1 className="text-2xl font-bold">Create Contract</h1>
+
+      {/* Template Selection */}
+      {templates.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Choose Template</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <button
+                onClick={() => { setUseTemplate(false); setSelectedTemplate(""); }}
+                className={`text-left p-4 rounded-lg border-2 transition-colors ${
+                  !useTemplate ? "border-orange-400 bg-orange-50" : "border-zinc-200 hover:border-zinc-300"
+                }`}
+              >
+                <p className="font-medium text-sm">Simple Contract</p>
+                <p className="text-xs text-zinc-500 mt-1">Basic agreement with custom terms</p>
+              </button>
+              {templates.map((t) => (
+                <button
+                  key={t.id}
+                  onClick={() => selectTemplate(t.id)}
+                  className={`text-left p-4 rounded-lg border-2 transition-colors ${
+                    selectedTemplate === t.id ? "border-orange-400 bg-orange-50" : "border-zinc-200 hover:border-zinc-300"
+                  }`}
+                >
+                  <p className="font-medium text-sm">{t.name}</p>
+                  <p className="text-xs text-zinc-500 mt-1 capitalize">{t.category} &middot; {((t.content as unknown[]) || []).length} sections</p>
+                </button>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {inquiryId && (
         <Badge variant="secondary" className="bg-orange-50 text-orange-700 border-orange-200">
@@ -189,20 +291,44 @@ export default function NewContractPage() {
         </CardContent>
       </Card>
 
-      {/* Terms */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Contract Terms</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Textarea
-            value={terms}
-            onChange={(e) => setTerms(e.target.value)}
-            rows={8}
-            className="text-sm"
-          />
-        </CardContent>
-      </Card>
+      {/* Template fields or custom terms */}
+      {useTemplate && templateBlocks.length > 0 ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Contract Fields</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {templateBlocks
+              .filter((b) => b.type === "field")
+              .map((block) => (
+                <div key={block.id} className="flex items-center gap-3">
+                  <Label className="w-36 text-sm text-zinc-500 shrink-0">
+                    {block.content}
+                  </Label>
+                  <Input
+                    value={block.fieldValue || ""}
+                    onChange={(e) => updateTemplateField(block.id, e.target.value)}
+                    placeholder={`Enter ${block.content?.toLowerCase()}`}
+                  />
+                </div>
+              ))}
+          </CardContent>
+        </Card>
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Contract Terms</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Textarea
+              value={terms}
+              onChange={(e) => setTerms(e.target.value)}
+              rows={8}
+              className="text-sm"
+            />
+          </CardContent>
+        </Card>
+      )}
 
       {/* Preview */}
       <Card>
