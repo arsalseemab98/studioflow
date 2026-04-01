@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { CopySigningLink } from "@/components/contracts/copy-signing-link";
 import type { ContractBlock } from "@/types/database";
 
 export default async function ContractDetailPage({
@@ -107,12 +108,7 @@ export default async function ContractDetailPage({
             </form>
           )}
           {(contract.status === "sent" || contract.status === "viewed") && (
-            <div>
-              <p className="text-sm text-zinc-500 mb-2">Signing link:</p>
-              <code className="text-xs bg-zinc-100 dark:bg-zinc-800 p-2 rounded block break-all">
-                {signingLink}
-              </code>
-            </div>
+            <CopySigningLink link={signingLink} />
           )}
         </CardContent>
       </Card>
