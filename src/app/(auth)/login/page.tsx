@@ -25,6 +25,9 @@ export default function LoginPage() {
   return (
     <Card>
       <CardHeader className="text-center">
+        <div className="flex justify-center mb-4">
+          <div className="w-10 h-10 btn-gradient rounded-xl" />
+        </div>
         <CardTitle className="text-2xl font-bold">Welcome back</CardTitle>
         <CardDescription>Sign in to your StudioFlow account</CardDescription>
       </CardHeader>

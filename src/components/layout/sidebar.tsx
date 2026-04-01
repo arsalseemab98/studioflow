@@ -60,7 +60,10 @@ export function Sidebar() {
         )}
       >
         <div className="p-6">
-          <h1 className="text-xl font-bold tracking-tight">StudioFlow</h1>
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 btn-gradient rounded-lg" />
+            <h1 className="text-xl font-bold tracking-tight">StudioFlow</h1>
+          </div>
           <p className="text-xs text-zinc-500 mt-1">Manage your studio</p>
         </div>
         <nav className="px-3 space-y-1">
