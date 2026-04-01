@@ -77,11 +77,23 @@ export async function submitPublicInquiry(orgSlug: string, formData: FormData) {
   }
 
   // Create inquiry
-  const hours = formData.get("hours") as string;
+  const hoursData = formData.get("hours") as string;
   const userMessage = formData.get("message") as string;
-  const message = hours
-    ? `Hours needed: ${hours}\n${userMessage || ""}`.trim()
-    : userMessage;
+
+  // Parse multi-day event data
+  let daysText = "";
+  try {
+    const days = JSON.parse(hoursData || "[]") as { name: string; date: string; hours: string }[];
+    if (days.length > 0) {
+      daysText = days
+        .map((d, i) => `Day ${i + 1}${d.name ? ` (${d.name})` : ""}: ${d.date}${d.hours ? ` — ${d.hours} hours` : ""}`)
+        .join("\n");
+    }
+  } catch {
+    if (hoursData) daysText = `Hours needed: ${hoursData}`;
+  }
+
+  const message = [daysText, userMessage].filter(Boolean).join("\n\n");
 
   const { error } = await admin.from("inquiries").insert({
     org_id: org.id,

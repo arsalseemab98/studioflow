@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { CheckCircle, Globe, Mail, Phone, MapPin } from "lucide-react";
+import { CheckCircle, Globe, Mail, Phone, MapPin, Plus, Trash2 } from "lucide-react";
 
 export default function PublicInquiryPage() {
   const { slug } = useParams<{ slug: string }>();
@@ -17,6 +17,9 @@ export default function PublicInquiryPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [org, setOrg] = useState<Record<string, unknown> | null>(null);
+  const [eventDays, setEventDays] = useState([
+    { id: "1", name: "", date: "", hours: "" },
+  ]);
 
   useEffect(() => {
     loadOrg();
@@ -151,28 +154,99 @@ export default function PublicInquiryPage() {
                   <option value="other">Other</option>
                 </select>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="event_date">Event Date</Label>
-                  <Input id="event_date" name="event_date" type="date" required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="hours">How many hours?</Label>
-                  <select
-                    id="hours"
-                    name="hours"
-                    className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm"
+              {/* Event Days */}
+              <div className="space-y-3">
+                <Label>Event Day(s)</Label>
+                {eventDays.map((day, i) => (
+                  <div
+                    key={day.id}
+                    className="p-3 rounded-lg border border-zinc-200 bg-zinc-50/50 space-y-3"
                   >
-                    <option value="">Select...</option>
-                    <option value="2">2 hours</option>
-                    <option value="4">4 hours</option>
-                    <option value="6">6 hours</option>
-                    <option value="8">8 hours</option>
-                    <option value="10">10 hours</option>
-                    <option value="12">12+ hours (full day)</option>
-                  </select>
-                </div>
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs font-medium text-zinc-500">
+                        Day {i + 1}
+                      </p>
+                      {eventDays.length > 1 ? (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setEventDays(eventDays.filter((d) => d.id !== day.id))
+                          }
+                          className="text-zinc-400 hover:text-red-500"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      ) : null}
+                    </div>
+                    <div className="space-y-2">
+                      <Input
+                        placeholder="Event name (e.g. Ceremony, Reception, Mehndi)"
+                        value={day.name}
+                        onChange={(e) =>
+                          setEventDays(
+                            eventDays.map((d) =>
+                              d.id === day.id ? { ...d, name: e.target.value } : d
+                            )
+                          )
+                        }
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <Input
+                        type="date"
+                        required={i === 0}
+                        value={day.date}
+                        onChange={(e) =>
+                          setEventDays(
+                            eventDays.map((d) =>
+                              d.id === day.id ? { ...d, date: e.target.value } : d
+                            )
+                          )
+                        }
+                      />
+                      <select
+                        value={day.hours}
+                        onChange={(e) =>
+                          setEventDays(
+                            eventDays.map((d) =>
+                              d.id === day.id ? { ...d, hours: e.target.value } : d
+                            )
+                          )
+                        }
+                        className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm"
+                      >
+                        <option value="">Hours...</option>
+                        <option value="2">2 hours</option>
+                        <option value="4">4 hours</option>
+                        <option value="6">6 hours</option>
+                        <option value="8">8 hours</option>
+                        <option value="10">10 hours</option>
+                        <option value="12">12+ hours</option>
+                      </select>
+                    </div>
+                  </div>
+                ))}
+                {eventDays.length < 5 ? (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setEventDays([
+                        ...eventDays,
+                        { id: Date.now().toString(), name: "", date: "", hours: "" },
+                      ])
+                    }
+                    className="w-full py-2 text-sm text-orange-500 border border-dashed border-orange-200 rounded-lg hover:bg-orange-50 flex items-center justify-center gap-1"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    Add another day
+                  </button>
+                ) : null}
               </div>
+
+              {/* Hidden fields for form submission */}
+              <input type="hidden" name="event_date" value={eventDays[0]?.date || ""} />
+              <input type="hidden" name="hours" value={JSON.stringify(eventDays.map((d) => ({ name: d.name, date: d.date, hours: d.hours })).filter((d) => d.date))} />
+
               <div className="space-y-2">
                 <Label htmlFor="location">Venue / Location</Label>
                 <Input id="location" name="location" placeholder="Venue name & city" />
