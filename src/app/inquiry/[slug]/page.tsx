@@ -120,71 +120,73 @@ export default function PublicInquiryPage() {
                   {error}
                 </div>
               )}
+              <div className="space-y-2">
+                <Label htmlFor="name">Full Name</Label>
+                <Input id="name" name="name" required placeholder="John & Jane Smith" />
+              </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="name">Your Name</Label>
-                  <Input id="name" name="name" required />
+                  <Label htmlFor="email">Email</Label>
+                  <Input id="email" name="email" type="email" required placeholder="you@email.com" />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input id="email" name="email" type="email" required />
+                  <Label htmlFor="phone">Phone</Label>
+                  <Input id="phone" name="phone" placeholder="+1 (555) 123-4567" />
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="phone">Phone (optional)</Label>
-                <Input id="phone" name="phone" />
+                <Label htmlFor="event_type">What type of event?</Label>
+                <select
+                  id="event_type"
+                  name="event_type"
+                  required
+                  className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm"
+                >
+                  <option value="">Select...</option>
+                  <option value="wedding">Wedding</option>
+                  <option value="engagement">Engagement</option>
+                  <option value="portrait">Portrait Session</option>
+                  <option value="corporate">Corporate Event</option>
+                  <option value="birthday">Birthday / Party</option>
+                  <option value="other">Other</option>
+                </select>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="event_type">Event Type</Label>
+                  <Label htmlFor="event_date">Event Date</Label>
+                  <Input id="event_date" name="event_date" type="date" required />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="hours">How many hours?</Label>
                   <select
-                    id="event_type"
-                    name="event_type"
-                    required
+                    id="hours"
+                    name="hours"
                     className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm"
                   >
                     <option value="">Select...</option>
-                    <option value="wedding">Wedding</option>
-                    <option value="engagement">Engagement</option>
-                    <option value="portrait">Portrait</option>
-                    <option value="corporate">Corporate Event</option>
-                    <option value="birthday">Birthday</option>
-                    <option value="other">Other</option>
+                    <option value="2">2 hours</option>
+                    <option value="4">4 hours</option>
+                    <option value="6">6 hours</option>
+                    <option value="8">8 hours</option>
+                    <option value="10">10 hours</option>
+                    <option value="12">12+ hours (full day)</option>
                   </select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="event_date">Event Date</Label>
-                  <Input id="event_date" name="event_date" type="date" />
-                </div>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="location">Location</Label>
-                  <Input
-                    id="location"
-                    name="location"
-                    placeholder="City or venue"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="budget">Budget ($)</Label>
-                  <Input
-                    id="budget"
-                    name="budget"
-                    type="number"
-                    placeholder="e.g. 2000"
-                  />
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="message">Tell us more</Label>
+                <Label htmlFor="location">Venue / Location</Label>
+                <Input id="location" name="location" placeholder="Venue name & city" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="message">Anything else we should know?</Label>
                 <Textarea
                   id="message"
                   name="message"
-                  rows={4}
-                  placeholder="Share any details about your event..."
+                  rows={3}
+                  placeholder="Special requests, number of guests, etc."
                 />
               </div>
+              <input type="hidden" name="budget" value="" />
               <Button
                 type="submit"
                 className="w-full text-white border-0"

@@ -77,14 +77,20 @@ export async function submitPublicInquiry(orgSlug: string, formData: FormData) {
   }
 
   // Create inquiry
+  const hours = formData.get("hours") as string;
+  const userMessage = formData.get("message") as string;
+  const message = hours
+    ? `Hours needed: ${hours}\n${userMessage || ""}`.trim()
+    : userMessage;
+
   const { error } = await admin.from("inquiries").insert({
     org_id: org.id,
     client_id: clientId,
     event_type: formData.get("event_type") as string,
-    event_date: formData.get("event_date") as string || null,
+    event_date: (formData.get("event_date") as string) || null,
     location: formData.get("location") as string,
     budget: formData.get("budget") ? Number(formData.get("budget")) : null,
-    message: formData.get("message") as string,
+    message,
   });
 
   if (error) return { error: error.message };
