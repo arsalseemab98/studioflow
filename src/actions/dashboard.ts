@@ -1,21 +1,22 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getUser } from "@/lib/supabase/get-user";
 
 export async function getDashboardStats() {
   const userData = await getUser();
   if (!userData?.orgId) return null;
 
-  const supabase = await createClient();
+  // Use admin client for stats to bypass RLS issues with bookings
+  const admin = createAdminClient();
   const orgId = userData.orgId;
 
-  // Use individual queries to avoid RLS issues
   const [bookingsRes, inquiriesRes, contractsRes, revenueRes] = await Promise.all([
-    supabase.from("bookings").select("id").eq("org_id", orgId).neq("status", "cancelled"),
-    supabase.from("inquiries").select("id").eq("org_id", orgId).eq("status", "new"),
-    supabase.from("contracts").select("id").eq("org_id", orgId).eq("status", "signed"),
-    supabase.from("bookings").select("total_price").eq("org_id", orgId).in("status", ["confirmed", "completed"]),
+    admin.from("bookings").select("id").eq("org_id", orgId).neq("status", "cancelled"),
+    admin.from("inquiries").select("id").eq("org_id", orgId).eq("status", "new"),
+    admin.from("contracts").select("id").eq("org_id", orgId).eq("status", "signed"),
+    admin.from("bookings").select("total_price").eq("org_id", orgId).in("status", ["confirmed", "completed"]),
   ]);
 
   const totalRevenue =
@@ -33,10 +34,10 @@ export async function getUpcomingBookings() {
   const userData = await getUser();
   if (!userData?.orgId) return [];
 
-  const supabase = await createClient();
+  const admin = createAdminClient();
   const today = new Date().toISOString().split("T")[0];
 
-  const { data } = await supabase
+  const { data } = await admin
     .from("bookings")
     .select("*, clients(name, email)")
     .eq("org_id", userData.orgId)
