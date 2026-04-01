@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getUser } from "@/lib/supabase/get-user";
 import { revalidatePath } from "next/cache";
+import { sendEmail, inquiryReceivedEmail } from "@/lib/email";
 
 export async function getInquiries(status?: string) {
   const userData = await getUser();
@@ -40,7 +41,7 @@ export async function submitPublicInquiry(orgSlug: string, formData: FormData) {
   // Find org by slug
   const { data: org } = await admin
     .from("organizations")
-    .select("id")
+    .select("id, name, email")
     .eq("slug", orgSlug)
     .single();
 
@@ -94,6 +95,29 @@ export async function submitPublicInquiry(orgSlug: string, formData: FormData) {
     action: "inquiry_received",
     metadata: { client_name: name, email },
   });
+
+  // Send email notification to studio owner
+  const { data: orgMembers } = await admin
+    .from("org_members")
+    .select("profiles(email)")
+    .eq("org_id", org.id)
+    .eq("role", "owner");
+
+  const ownerEmail = (orgMembers?.[0]?.profiles as unknown as Record<string, string>)?.email;
+  if (ownerEmail) {
+    const eventType = formData.get("event_type") as string;
+    const eventDate = (formData.get("event_date") as string) || null;
+    const location = (formData.get("location") as string) || null;
+    const template = inquiryReceivedEmail({
+      studioName: org.name || "Your Studio",
+      clientName: name,
+      eventType,
+      eventDate,
+      location,
+      dashboardUrl: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/inquiries`,
+    });
+    await sendEmail({ to: ownerEmail, ...template });
+  }
 
   return { success: true };
 }

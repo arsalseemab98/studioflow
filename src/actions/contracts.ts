@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getUser } from "@/lib/supabase/get-user";
 import { revalidatePath } from "next/cache";
+import { sendEmail, contractSentEmail, contractSignedEmail, bookingConfirmationEmail } from "@/lib/email";
 import type { ContractBlock } from "@/types/database";
 
 export async function getContractTemplates() {
@@ -78,13 +79,37 @@ export async function createContract(
 }
 
 export async function sendContract(id: string) {
+  const userData = await getUser();
   const supabase = await createClient();
+
   const { error } = await supabase
     .from("contracts")
     .update({ status: "sent", sent_at: new Date().toISOString() })
     .eq("id", id);
 
   if (error) return { error: error.message };
+
+  // Send email to client
+  const admin = createAdminClient();
+  const { data: contract } = await admin
+    .from("contracts")
+    .select("access_token, clients(name, email)")
+    .eq("id", id)
+    .single();
+
+  if (contract) {
+    const client = contract.clients as unknown as Record<string, string>;
+    if (client?.email) {
+      const signingLink = `${process.env.NEXT_PUBLIC_APP_URL}/contract/${contract.access_token}`;
+      const template = contractSentEmail({
+        clientName: client.name || "Client",
+        studioName: userData?.organization?.name || "Our Studio",
+        signingLink,
+      });
+      await sendEmail({ to: client.email, ...template });
+    }
+  }
+
   revalidatePath("/dashboard/contracts");
   return { success: true };
 }
@@ -192,6 +217,59 @@ export async function signContract(token: string, signatureData: string) {
     action: "contract_signed",
     metadata: { contract_id: contract.id },
   });
+
+  // Send emails
+  const { data: org } = await admin
+    .from("organizations")
+    .select("name")
+    .eq("id", contract.org_id)
+    .single();
+
+  const { data: clientData } = await admin
+    .from("clients")
+    .select("name, email")
+    .eq("id", contract.client_id)
+    .single();
+
+  const studioName = org?.name || "Studio";
+
+  // Email studio owner: contract signed notification
+  const { data: orgMembers } = await admin
+    .from("org_members")
+    .select("profiles(email)")
+    .eq("org_id", contract.org_id)
+    .eq("role", "owner");
+
+  const ownerEmail = (orgMembers?.[0]?.profiles as unknown as Record<string, string>)?.email;
+  if (ownerEmail) {
+    const template = contractSignedEmail({
+      studioName,
+      clientName: clientData?.name || "Client",
+      dashboardUrl: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/bookings`,
+    });
+    await sendEmail({ to: ownerEmail, ...template });
+  }
+
+  // Email client: booking confirmation
+  if (clientData?.email) {
+    const blocks = contract.content as { type: string; fieldName?: string; fieldValue?: string }[];
+    let eventDate = "";
+    let location = "";
+    let priceStr = "";
+    for (const block of blocks) {
+      if (block.type === "field" && block.fieldName === "event_date") eventDate = block.fieldValue || "";
+      if (block.type === "field" && block.fieldName === "location") location = block.fieldValue || "";
+      if (block.type === "field" && block.fieldName === "price") priceStr = block.fieldValue || "";
+    }
+    const template = bookingConfirmationEmail({
+      clientName: clientData.name,
+      studioName,
+      eventDate: eventDate || "TBD",
+      location: location || "TBD",
+      price: priceStr || "TBD",
+    });
+    await sendEmail({ to: clientData.email, ...template });
+  }
 
   return { success: true };
 }
