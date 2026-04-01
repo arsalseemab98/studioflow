@@ -14,7 +14,8 @@ export async function getDashboardStats() {
     supabase
       .from("bookings")
       .select("id", { count: "exact", head: true })
-      .eq("org_id", orgId),
+      .eq("org_id", orgId)
+      .neq("status", "cancelled"),
     supabase
       .from("inquiries")
       .select("id", { count: "exact", head: true })

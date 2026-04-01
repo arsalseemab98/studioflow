@@ -132,16 +132,56 @@ export async function signContract(token: string, signatureData: string) {
 
   if (error) return { error: error.message };
 
-  // Auto-create tentative booking
+  // Auto-create tentative booking with data from contract
   if (contract.client_id) {
+    const blocks = contract.content as { type: string; fieldName?: string; fieldValue?: string; content?: string }[];
+
+    // Extract fields from contract content
+    let eventDate = new Date().toISOString().split("T")[0];
+    let location = "";
+    let price = 0;
+    let eventType = "";
+
+    for (const block of blocks) {
+      if (block.type === "field") {
+        if (block.fieldName === "event_date" && block.fieldValue) {
+          eventDate = block.fieldValue;
+        }
+        if (block.fieldName === "location" && block.fieldValue) {
+          location = block.fieldValue;
+        }
+        if (block.fieldName === "price" && block.fieldValue) {
+          price = Number(block.fieldValue.replace(/[^0-9.]/g, "")) || 0;
+        }
+      }
+      if (block.type === "heading" && block.content) {
+        // Extract event type from heading like "Wedding Photography Service Agreement"
+        const heading = block.content.toLowerCase();
+        if (heading.includes("wedding")) eventType = "wedding";
+        else if (heading.includes("engagement")) eventType = "engagement";
+        else if (heading.includes("portrait")) eventType = "portrait";
+        else if (heading.includes("corporate")) eventType = "corporate";
+      }
+    }
+
+    // Get client name for booking title
+    const { data: client } = await admin
+      .from("clients")
+      .select("name")
+      .eq("id", contract.client_id)
+      .single();
+
     await admin.from("bookings").insert({
       org_id: contract.org_id,
       client_id: contract.client_id,
       contract_id: contract.id,
       inquiry_id: contract.inquiry_id,
-      title: "Booking from signed contract",
-      event_date: new Date().toISOString().split("T")[0],
-      status: "tentative",
+      title: client?.name ? `${client.name} — ${eventType || "Event"}` : "Booking from signed contract",
+      event_type: eventType || null,
+      event_date: eventDate,
+      location,
+      total_price: price,
+      status: "confirmed",
     });
   }
 
