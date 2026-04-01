@@ -55,33 +55,41 @@ export default function NewContractPage() {
     setTemplates(data as ContractTemplate[]);
   }
 
+  // Auto-fill fields are: client_name, client_email, client_contact (from client), event_date, location (from inquiry)
+  // Manual fields are: price (studio enters this)
+  const autoFillFields = ["client_name", "client_email", "client_contact", "event_date", "location"];
+
+  function fillTemplateBlocks(tmpl: ContractTemplate, clientId?: string) {
+    const c = clients.find((cl) => cl.id === (clientId || selectedClient));
+    const blocks = (tmpl.content as ContractBlock[]).map((block) => {
+      if (block.type === "field") {
+        if (block.fieldName === "client_name") return { ...block, fieldValue: c?.name || "" };
+        if (block.fieldName === "client_email") return { ...block, fieldValue: c?.email || "" };
+        if (block.fieldName === "client_contact") return { ...block, fieldValue: c?.phone || "" };
+        if (block.fieldName === "event_date") return { ...block, fieldValue: eventDate || eventDateValue };
+        if (block.fieldName === "location") return { ...block, fieldValue: location || locationValue };
+        if (block.fieldName === "price") return { ...block, fieldValue: price ? `$${Number(price).toLocaleString()}` : "" };
+      }
+      return block;
+    });
+    return blocks;
+  }
+
   function selectTemplate(templateId: string) {
     setSelectedTemplate(templateId);
     const tmpl = templates.find((t) => t.id === templateId);
     if (tmpl) {
       setUseTemplate(true);
-      // Pre-fill field values from inquiry params
-      const blocks = (tmpl.content as ContractBlock[]).map((block) => {
-        if (block.type === "field") {
-          if (block.fieldName === "client_name") {
-            const c = clients.find((cl) => cl.id === selectedClient);
-            return { ...block, fieldValue: c?.name || "" };
-          }
-          if (block.fieldName === "client_email") {
-            const c = clients.find((cl) => cl.id === selectedClient);
-            return { ...block, fieldValue: c?.email || "" };
-          }
-          if (block.fieldName === "client_contact") {
-            const c = clients.find((cl) => cl.id === selectedClient);
-            return { ...block, fieldValue: c?.phone || "" };
-          }
-          if (block.fieldName === "event_date") return { ...block, fieldValue: eventDate };
-          if (block.fieldName === "location") return { ...block, fieldValue: location };
-          if (block.fieldName === "price") return { ...block, fieldValue: price ? `$${Number(price).toLocaleString()}` : "" };
-        }
-        return block;
-      });
-      setTemplateBlocks(blocks);
+      setTemplateBlocks(fillTemplateBlocks(tmpl));
+    }
+  }
+
+  // Re-fill when client changes
+  function handleClientChange(clientId: string) {
+    setSelectedClient(clientId);
+    if (useTemplate && selectedTemplate) {
+      const tmpl = templates.find((t) => t.id === selectedTemplate);
+      if (tmpl) setTemplateBlocks(fillTemplateBlocks(tmpl, clientId));
     }
   }
 
@@ -224,7 +232,7 @@ export default function NewContractPage() {
         <CardContent>
           <select
             value={selectedClient}
-            onChange={(e) => setSelectedClient(e.target.value)}
+            onChange={(e) => handleClientChange(e.target.value)}
             className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm"
           >
             <option value="">Choose a client...</option>
@@ -297,21 +305,52 @@ export default function NewContractPage() {
           <CardHeader>
             <CardTitle className="text-base">Contract Fields</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
-            {templateBlocks
-              .filter((b) => b.type === "field")
-              .map((block) => (
-                <div key={block.id} className="flex items-center gap-3">
-                  <Label className="w-36 text-sm text-zinc-500 shrink-0">
-                    {block.content}
-                  </Label>
-                  <Input
-                    value={block.fieldValue || ""}
-                    onChange={(e) => updateTemplateField(block.id, e.target.value)}
-                    placeholder={`Enter ${block.content?.toLowerCase()}`}
-                  />
-                </div>
-              ))}
+          <CardContent className="space-y-4">
+            {/* Auto-filled from client/inquiry */}
+            <div>
+              <p className="text-xs font-medium text-zinc-400 uppercase tracking-wider mb-3">Auto-filled from client & inquiry</p>
+              <div className="space-y-3">
+                {templateBlocks
+                  .filter((b) => b.type === "field" && autoFillFields.includes(b.fieldName || ""))
+                  .map((block) => (
+                    <div key={block.id} className="flex items-center gap-3">
+                      <Label className="w-36 text-sm text-zinc-500 shrink-0">
+                        {block.content}
+                      </Label>
+                      <Input
+                        value={block.fieldValue || ""}
+                        readOnly
+                        className="bg-zinc-50 text-zinc-600"
+                      />
+                    </div>
+                  ))}
+              </div>
+              {!selectedClient && (
+                <p className="text-xs text-orange-500 mt-2">Select a client above to auto-fill these fields</p>
+              )}
+            </div>
+
+            {/* Manual entry (price) */}
+            <div className="border-t pt-4">
+              <p className="text-xs font-medium text-orange-500 uppercase tracking-wider mb-3">You set this</p>
+              <div className="space-y-3">
+                {templateBlocks
+                  .filter((b) => b.type === "field" && !autoFillFields.includes(b.fieldName || ""))
+                  .map((block) => (
+                    <div key={block.id} className="flex items-center gap-3">
+                      <Label className="w-36 text-sm text-zinc-500 shrink-0">
+                        {block.content}
+                      </Label>
+                      <Input
+                        value={block.fieldValue || ""}
+                        onChange={(e) => updateTemplateField(block.id, e.target.value)}
+                        placeholder={`Enter ${block.content?.toLowerCase()}`}
+                        className="border-orange-200 focus:border-orange-400"
+                      />
+                    </div>
+                  ))}
+              </div>
+            </div>
           </CardContent>
         </Card>
       ) : (
