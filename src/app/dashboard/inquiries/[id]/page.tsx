@@ -1,13 +1,15 @@
 import { getInquiry, updateInquiryStatus } from "@/actions/inquiries";
-import { getCrewMembers, assignCrew, getBookingAssignments } from "@/actions/crew";
+import { getCrewMembers } from "@/actions/crew";
+import { getIntakeForms, sendIntakeForm } from "@/actions/intake-forms";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { Camera, Video, UserPlus, Check } from "lucide-react";
+import { Check, ClipboardList, FileText, Users } from "lucide-react";
 import { CrewAssignPanel } from "@/components/dashboard/crew-assign-panel";
+import { SendDetailsForm } from "@/components/dashboard/send-details-form";
 
 export default async function InquiryDetailPage({
   params,
@@ -15,27 +17,35 @@ export default async function InquiryDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const inquiry = await getInquiry(id);
+  const [inquiry, crew, intakeForms] = await Promise.all([
+    getInquiry(id),
+    getCrewMembers(),
+    getIntakeForms(),
+  ]);
 
   if (!inquiry) notFound();
 
   const client = inquiry.clients as Record<string, string> | null;
-  const crew = await getCrewMembers();
 
   const pipelineSteps = [
-    { key: "new", label: "Submitted", done: true },
+    { key: "submitted", label: "Inquiry", done: true },
     {
-      key: "contacted",
-      label: "Crew Assigned",
+      key: "details",
+      label: "Details Form",
       done: ["contacted", "converted", "archived"].includes(inquiry.status),
+    },
+    {
+      key: "crew",
+      label: "Crew Assigned",
+      done: ["contacted", "converted"].includes(inquiry.status),
     },
     {
       key: "contract",
       label: "Contract Sent",
-      done: ["converted"].includes(inquiry.status),
+      done: inquiry.status === "converted",
     },
     {
-      key: "converted",
+      key: "booked",
       label: "Booked",
       done: inquiry.status === "converted",
     },
@@ -104,7 +114,7 @@ export default async function InquiryDetailPage({
                 </div>
                 {i < pipelineSteps.length - 1 && (
                   <div
-                    className={`h-0.5 w-16 mx-2 mt-[-16px] ${
+                    className={`h-0.5 w-12 mx-1 mt-[-16px] ${
                       step.done ? "bg-orange-400" : "bg-zinc-200"
                     }`}
                   />
@@ -171,7 +181,7 @@ export default async function InquiryDetailPage({
         </Card>
       </div>
 
-      {inquiry.message && (
+      {inquiry.message ? (
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Message</CardTitle>
@@ -182,47 +192,97 @@ export default async function InquiryDetailPage({
             </p>
           </CardContent>
         </Card>
-      )}
+      ) : null}
 
-      {/* Crew Assignment */}
-      <CrewAssignPanel inquiryId={id} crew={crew} />
+      {/* Step 1: Send Details Form to Client */}
+      {inquiry.status === "new" ? (
+        <Card className="border-orange-200 bg-orange-50/30">
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <ClipboardList className="h-4 w-4 text-orange-500" />
+              Step 1: Send Details Form to Client
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-zinc-500 mb-4">
+              Send the client a detailed form to collect event specifics (venues, dates, timings, special requests).
+            </p>
+            <SendDetailsForm
+              inquiryId={id}
+              clientId={inquiry.client_id || ""}
+              intakeForms={intakeForms}
+            />
+          </CardContent>
+        </Card>
+      ) : null}
 
-      {/* Actions */}
+      {/* Step 2: Crew Assignment */}
+      {inquiry.status !== "new" ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              Step 2: Assign Crew
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <CrewAssignPanel inquiryId={id} crew={crew} />
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {/* Step 3: Send Contract — only after details received */}
+      {inquiry.status !== "new" && inquiry.status !== "archived" ? (
+        <Card className="border-orange-200 bg-orange-50/30">
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <FileText className="h-4 w-4 text-orange-500" />
+              Step 3: Send Contract with Price
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-zinc-500 mb-4">
+              Review the client&apos;s details, set your price, and send the contract for digital signature.
+            </p>
+            <Link
+              href={`/dashboard/contracts/new?inquiry=${id}&client=${inquiry.client_id}&event_type=${inquiry.event_type}&event_date=${inquiry.event_date || ""}&location=${inquiry.location || ""}&budget=${inquiry.budget || ""}`}
+            >
+              <Button className="btn-gradient text-white border-0">
+                <FileText className="h-4 w-4 mr-2" />
+                Create Contract with Price
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {/* Other Actions */}
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Actions</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-3">
-          {inquiry.status === "new" && (
+          {inquiry.status === "new" ? (
             <form action={markContacted}>
               <Button variant="outline" type="submit">
-                Mark Crew Assigned
+                Mark Details Received
               </Button>
             </form>
-          )}
-          {(inquiry.status === "new" || inquiry.status === "contacted") && (
-            <>
-              <Link
-                href={`/dashboard/contracts/new?inquiry=${id}&client=${inquiry.client_id}&event_type=${inquiry.event_type}&event_date=${inquiry.event_date || ""}&location=${inquiry.location || ""}&budget=${inquiry.budget || ""}`}
-              >
-                <Button className="btn-gradient text-white border-0">
-                  Send Contract with Price
-                </Button>
-              </Link>
-              <form action={markConverted}>
-                <Button variant="outline" type="submit">
-                  Mark Booked
-                </Button>
-              </form>
-            </>
-          )}
-          {inquiry.status !== "archived" && (
+          ) : null}
+          {inquiry.status === "contacted" ? (
+            <form action={markConverted}>
+              <Button variant="outline" type="submit">
+                Mark as Booked
+              </Button>
+            </form>
+          ) : null}
+          {inquiry.status !== "archived" ? (
             <form action={markArchived}>
               <Button variant="destructive" type="submit">
                 Archive
               </Button>
             </form>
-          )}
+          ) : null}
         </CardContent>
       </Card>
     </div>

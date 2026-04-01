@@ -406,6 +406,13 @@ export default function NewContractPage() {
         </CardContent>
       </Card>
 
+      {!price ? (
+        <div className="text-center p-4 bg-red-50 border border-red-200 rounded-lg">
+          <p className="text-sm text-red-600 font-medium">Price is required to send a contract</p>
+          <p className="text-xs text-red-400 mt-1">Enter the total price above before creating the contract</p>
+        </div>
+      ) : null}
+
       <Button
         onClick={handleCreate}
         disabled={!selectedClient || !price || saving}
