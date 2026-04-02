@@ -111,7 +111,7 @@ export async function getIntakeFormByToken(token: string) {
   const admin = createAdminClient();
   const { data: response } = await admin
     .from("intake_responses")
-    .select("*, intake_forms(*)")
+    .select("*, intake_forms(*, organizations(name, email, phone, website, description, primary_color, logo_url))")
     .eq("access_token", token)
     .single();
 
