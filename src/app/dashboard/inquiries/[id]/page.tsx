@@ -195,22 +195,25 @@ export default async function InquiryDetailPage({
       ) : null}
 
       {/* Step 1: Send Details Form to Client */}
-      {inquiry.status === "new" ? (
-        <Card className="border-orange-200 bg-orange-50/30">
+      {inquiry.status !== "converted" && inquiry.status !== "archived" ? (
+        <Card className={inquiry.status === "new" ? "border-orange-200 bg-orange-50/30" : ""}>
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
               <ClipboardList className="h-4 w-4 text-orange-500" />
-              Step 1: Send Details Form to Client
+              {inquiry.status === "new" ? "Step 1: Send Details Form to Client" : "Send Details Form Again"}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-sm text-zinc-500 mb-4">
-              Send the client a detailed form to collect event specifics (venues, dates, timings, special requests).
+              {inquiry.status === "new"
+                ? "Send the client a detailed form to collect event specifics (venues, dates, timings, special requests)."
+                : "Need to collect more details? Send another form to the client."}
             </p>
             <SendDetailsForm
               inquiryId={id}
               clientId={inquiry.client_id || ""}
               intakeForms={intakeForms}
+              resend={inquiry.status !== "new"}
             />
           </CardContent>
         </Card>

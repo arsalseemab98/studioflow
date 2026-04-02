@@ -13,12 +13,14 @@ interface SendDetailsFormProps {
   inquiryId: string;
   clientId: string;
   intakeForms: Record<string, unknown>[];
+  resend?: boolean;
 }
 
 export function SendDetailsForm({
   inquiryId,
   clientId,
   intakeForms,
+  resend = false,
 }: SendDetailsFormProps) {
   const [selectedForm, setSelectedForm] = useState<string>("");
   const [link, setLink] = useState<string>("");
@@ -34,8 +36,10 @@ export function SendDetailsForm({
     if (result.success && result.link) {
       setLink(result.link);
       setSent(true);
-      // Mark inquiry as contacted (details form sent)
-      await updateInquiryStatus(inquiryId, "contacted");
+      // Only update status on first send, not resend
+      if (!resend) {
+        await updateInquiryStatus(inquiryId, "contacted");
+      }
     }
     setSending(false);
   }
@@ -115,7 +119,7 @@ export function SendDetailsForm({
             ) : (
               <>
                 <Send className="h-4 w-4 mr-2" />
-                Send Details Form to Client
+                {resend ? "Re-send Details Form" : "Send Details Form to Client"}
               </>
             )}
           </Button>
