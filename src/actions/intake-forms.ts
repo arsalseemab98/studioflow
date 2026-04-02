@@ -4,7 +4,8 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getUser } from "@/lib/supabase/get-user";
 import { revalidatePath } from "next/cache";
-import { sendEmail } from "@/lib/email";
+import { sendEmail, detailsFormEmail } from "@/lib/email";
+import { getCompanyInfo } from "@/lib/get-company";
 import type { IntakeFormField } from "@/types/database";
 
 export async function getIntakeForms() {
@@ -92,31 +93,15 @@ export async function sendIntakeForm(formId: string, inquiryId: string, clientId
     .eq("id", formId)
     .single();
 
-  const studioName = userData?.organization?.name || "Our Studio";
-
-  if (client?.email) {
-    await sendEmail({
-      to: client.email,
-      subject: `${studioName} — Please fill out your event details`,
-      html: `
-        <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 560px; margin: 0 auto; padding: 40px 20px;">
-          <div style="background: linear-gradient(135deg, #f97316, #ec4899); padding: 3px; border-radius: 12px;">
-            <div style="background: white; border-radius: 10px; padding: 32px;">
-              <h2 style="margin: 0 0 8px 0; font-size: 20px; color: #18181b;">We'd love to learn more!</h2>
-              <p style="margin: 0 0 24px 0; color: #71717a; font-size: 14px;">
-                Hi ${client.name}, ${studioName} has sent you a questionnaire to collect details about your event.
-              </p>
-              <p style="color: #3f3f46; font-size: 14px; line-height: 1.6;">
-                Please fill out the <strong>${form?.name || "event details form"}</strong> so we can prepare everything for your special day. It only takes a few minutes.
-              </p>
-              <a href="${link}" style="display: inline-block; margin-top: 24px; padding: 14px 32px; background: linear-gradient(135deg, #f97316, #ec4899); color: white; text-decoration: none; border-radius: 8px; font-size: 15px; font-weight: 600;">Fill Out Details</a>
-              <p style="margin-top: 24px; font-size: 12px; color: #a1a1aa;">If the button doesn't work, copy this link:<br/>${link}</p>
-            </div>
-          </div>
-          <p style="text-align: center; margin-top: 16px; font-size: 12px; color: #a1a1aa;">Sent by StudioFlow on behalf of ${studioName}</p>
-        </div>
-      `,
+  if (client?.email && userData?.orgId) {
+    const company = await getCompanyInfo(userData.orgId);
+    const template = detailsFormEmail({
+      company,
+      clientName: client.name,
+      formName: form?.name || "event details form",
+      formLink: link,
     });
+    await sendEmail({ to: client.email, company, ...template });
   }
 
   return { success: true, link };

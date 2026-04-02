@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getUser } from "@/lib/supabase/get-user";
 import { revalidatePath } from "next/cache";
 import { sendEmail, contractSentEmail, contractSignedEmail, bookingConfirmationEmail } from "@/lib/email";
+import { getCompanyInfo } from "@/lib/get-company";
 import type { ContractBlock } from "@/types/database";
 
 export async function getContractTemplates() {
@@ -99,14 +100,16 @@ export async function sendContract(id: string) {
 
   if (contract) {
     const client = contract.clients as unknown as Record<string, string>;
-    if (client?.email) {
-      const signingLink = `${process.env.NEXT_PUBLIC_APP_URL}/contract/${contract.access_token}`;
+    if (client?.email && userData?.orgId) {
+      const company = await getCompanyInfo(userData.orgId);
+      const appUrl = (process.env.NEXT_PUBLIC_APP_URL || "").trim();
+      const signingLink = `${appUrl}/contract/${contract.access_token}`;
       const template = contractSentEmail({
+        company,
         clientName: client.name || "Client",
-        studioName: userData?.organization?.name || "Our Studio",
         signingLink,
       });
-      await sendEmail({ to: client.email, ...template });
+      await sendEmail({ to: client.email, company, ...template });
     }
   }
 
@@ -219,19 +222,13 @@ export async function signContract(token: string, signatureData: string) {
   });
 
   // Send emails
-  const { data: org } = await admin
-    .from("organizations")
-    .select("name")
-    .eq("id", contract.org_id)
-    .single();
+  const company = await getCompanyInfo(contract.org_id);
 
   const { data: clientData } = await admin
     .from("clients")
     .select("name, email")
     .eq("id", contract.client_id)
     .single();
-
-  const studioName = org?.name || "Studio";
 
   // Email studio owner: contract signed notification
   const { data: orgMembers } = await admin
@@ -241,34 +238,35 @@ export async function signContract(token: string, signatureData: string) {
     .eq("role", "owner");
 
   const ownerEmail = (orgMembers?.[0]?.profiles as unknown as Record<string, string>)?.email;
+  const appUrl = (process.env.NEXT_PUBLIC_APP_URL || "").trim();
   if (ownerEmail) {
     const template = contractSignedEmail({
-      studioName,
+      company,
       clientName: clientData?.name || "Client",
-      dashboardUrl: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/bookings`,
+      dashboardUrl: `${appUrl}/dashboard/bookings`,
     });
-    await sendEmail({ to: ownerEmail, ...template });
+    await sendEmail({ to: ownerEmail, company, ...template });
   }
 
   // Email client: booking confirmation
   if (clientData?.email) {
     const blocks = contract.content as { type: string; fieldName?: string; fieldValue?: string }[];
-    let eventDate = "";
-    let location = "";
+    let eventDateStr = "";
+    let locationStr = "";
     let priceStr = "";
     for (const block of blocks) {
-      if (block.type === "field" && block.fieldName === "event_date") eventDate = block.fieldValue || "";
-      if (block.type === "field" && block.fieldName === "location") location = block.fieldValue || "";
+      if (block.type === "field" && block.fieldName === "event_date") eventDateStr = block.fieldValue || "";
+      if (block.type === "field" && block.fieldName === "location") locationStr = block.fieldValue || "";
       if (block.type === "field" && block.fieldName === "price") priceStr = block.fieldValue || "";
     }
     const template = bookingConfirmationEmail({
+      company,
       clientName: clientData.name,
-      studioName,
-      eventDate: eventDate || "TBD",
-      location: location || "TBD",
+      eventDate: eventDateStr || "TBD",
+      location: locationStr || "TBD",
       price: priceStr || "TBD",
     });
-    await sendEmail({ to: clientData.email, ...template });
+    await sendEmail({ to: clientData.email, company, ...template });
   }
 
   return { success: true };

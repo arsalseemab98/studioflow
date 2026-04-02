@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getUser } from "@/lib/supabase/get-user";
 import { revalidatePath } from "next/cache";
 import { sendEmail, inquiryReceivedEmail } from "@/lib/email";
+import { getCompanyInfo } from "@/lib/get-company";
 
 export async function getInquiries(status?: string) {
   const userData = await getUser();
@@ -123,18 +124,20 @@ export async function submitPublicInquiry(orgSlug: string, formData: FormData) {
 
   const ownerEmail = (orgMembers?.[0]?.profiles as unknown as Record<string, string>)?.email;
   if (ownerEmail) {
+    const company = await getCompanyInfo(org.id);
     const eventType = formData.get("event_type") as string;
     const eventDate = (formData.get("event_date") as string) || null;
     const location = (formData.get("location") as string) || null;
+    const appUrl = (process.env.NEXT_PUBLIC_APP_URL || "").trim();
     const template = inquiryReceivedEmail({
-      studioName: org.name || "Your Studio",
+      company,
       clientName: name,
       eventType,
       eventDate,
       location,
-      dashboardUrl: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/inquiries`,
+      dashboardUrl: `${appUrl}/dashboard/inquiries`,
     });
-    await sendEmail({ to: ownerEmail, ...template });
+    await sendEmail({ to: ownerEmail, company, ...template });
   }
 
   return { success: true };
