@@ -2,122 +2,78 @@
 
 ---
 
-## 2026-03-31 — Initial Build (Complete)
+## 2026-03-31 — Initial Build
 
-### What was done
-- Scaffolded Next.js 16 project with Tailwind CSS and shadcn/ui
-- Set up Supabase client helpers (browser, server, admin, middleware)
-- Wrote full database schema with 11 tables, indexes, RLS policies, and auto-triggers
-- Built auth, dashboard, clients, inquiries, intake forms, contracts, bookings, analytics, recommendations, settings, landing page
+- Scaffolded Next.js 16 + Tailwind + shadcn/ui + Supabase
+- Built all core features: auth, dashboard, clients, inquiries, intake forms, contracts, bookings, analytics, recommendations, settings, landing page
 - 21 routes, 66 files, 7,357 lines
-
-### Decisions
-- Monolithic Next.js + Supabase (fastest to ship)
-- Database state machine for workflow
-- Canvas-based signature (no deps)
-- Recharts for analytics
-
-### Problems
-- shadcn/ui v4 uses @base-ui/react — no `asChild` prop
-- Next.js 16 deprecates middleware.ts
-- Recharts Tooltip formatter type strict
-- Supabase join type casting issues
+- Problems: shadcn/ui base-ui (no asChild), Next.js 16 middleware deprecation, Recharts types, Supabase join casting
 
 ---
 
-## 2026-04-01 — Full Feature Build + Testing
+## 2026-04-01 — Full Feature Build, Testing, Polish
 
-### What was done
+### Infrastructure
+- Created Supabase project (us-east-1), applied schema, created demo user
+- Fixed signup trigger (combined into single function for FK ordering)
+- Deployed to Vercel (studioflow-sage.vercel.app), set all env vars
+- Fixed RLS: created `get_user_org_ids()` SECURITY DEFINER function, updated all 13 table policies
+- Fixed missing RLS policies: intake_responses (INSERT/UPDATE), booking_assignments, contract_templates
+- Dashboard stats switched to admin client (RLS workaround for bookings)
 
-**Supabase & Deployment**
-- Created Supabase project "studioflow" in us-east-1
-- Applied schema, seeded recommendations, created demo user
-- Fixed signup trigger (combined into single function)
-- Deployed to Vercel (studioflow-sage.vercel.app)
-- Set all env vars via Vercel CLI
+### Design
+- Generated 3 landing page designs via superdesign MCP, applied Design 3 (warm gradient)
+- Purple hero, orange-to-pink buttons, DM Sans font
+- Themed entire app: auth pages, sidebar, landing page, emails
 
-**Design Theme (Warm Gradient)**
-- Generated 3 designs via superdesign MCP, user chose Design 3
-- Applied purple hero gradient, orange-to-pink buttons, DM Sans font
-- Themed auth pages, sidebar, landing page
-
-**Crew Management & Booking Pipeline**
-- New tables: crew_members, booking_assignments (migration 002)
-- Crew page with team + external freelancers, invite system
-- Enhanced inquiry detail: 5-step pipeline, crew assignment panel
-- Enhanced contract creation: pre-fill from inquiry, manual price, template selection
+### Crew & Booking Pipeline
+- New tables: crew_members, booking_assignments
+- Crew management page with team + external freelancers + invite system
+- Freelancer portal with limited dashboard
+- Enhanced inquiry detail: 5-step pipeline, crew assignment, send details form, send contract
+- Enhanced contract creation: template selection, auto-fill, price required
 - Enhanced booking detail: assigned crew display
-- Freelancer portal: limited sidebar, only their bookings
+- Auto-booking extracts price/date/location/event type from contract JSONB
 
-**Multi-Tenant Company Branding**
-- Added org fields: description, website, email, phone, address, brand color, industry (migration 003)
-- Settings page with Company tab, brand color picker
+### Multi-Tenant Branding
+- Added org fields: description, website, email, phone, address, brand color, industry
+- Settings page with Company tab + brand color picker
 - Public forms show company branding dynamically
 
-**RLS Fix (Critical)**
-- Self-referencing org_members subqueries caused empty results
-- Created `get_user_org_ids()` SECURITY DEFINER function (migration 004)
-- Updated all 13 table policies
-- Dashboard stats switched to admin client for bookings
+### Contract System
+- Created Photography Client Agreement template from RK Studios PDF (11 clauses)
+- Template selector on contract creation
+- Auto-fill: client name/email/phone (from client), date/location (from inquiry) — read-only
+- Price: manual entry, required (red warning without it)
+- Signing link: clickable Input with Copy + Open buttons (fixed line break issue)
 
-**Email Integration (Resend)**
-- Wired Resend API for all workflow steps
-- 4 email templates: inquiry received, contract sent, contract signed, booking confirmed
-- Beautiful HTML emails with gradient accents
-
-**Contract Templates**
-- Created "Photography Client Agreement" from RK Studios PDF (11 clauses, 22 sections)
-- Template selector on contract creation page
-- Auto-fill fields from client/inquiry data (read-only)
-- Price field manual + required (red warning without it)
-- Signing link now clickable with copy + open buttons
-
-**Details Form Flow**
-- Created "Wedding Details Form" intake template (22 fields: couple, 3 events, venues)
-- "Send Details Form" step on inquiry detail page
-- Pick form template → generate link → send to client
-- Pipeline: Inquiry → Details Form → Crew → Contract → Booked
-- "Send Details Form" quick button on inquiries list for "new" status
-
-**Inquiry Form Enhancements**
-- Simplified form: name, email, phone, event type, multi-day, venue, notes
-- Removed budget field (studio sets price)
-- Multi-day events: up to 5 days, each with event name + date + hours
-- "Add another day" button
-- Data formatted as "Day 1 (Ceremony): 2026-07-15 — 8 hours"
-
-**Share Inquiry Link**
-- Dashboard card with copy link + email button
-- Email opens mail client with pre-written message
+### Inquiry Enhancements
+- Simplified inquiry form: removed budget, added multi-day events (up to 5)
+- Each day: event name + date + hours (2/4/6/8/10/12+)
+- Details form step: send Wedding Details Form (22 fields) to client before contract
+- Re-send details form at any time without changing status
+- Inquiry list: status icons (🟠🕐✅📦) + context-aware "Next Step" buttons
 - Manual inquiry creation from dashboard
 
-**Bug Fixes**
-- Auto-booking now extracts price/date/location from contract JSONB
-- Booking title uses "Client Name — event type"
-- Booking status set to "confirmed" (was "tentative")
-- Dashboard Total Bookings counts non-cancelled (was only confirmed/completed)
-- Fixed signing link breaking across lines (now Input + Copy + Open buttons)
+### Email System (Resend)
+- 5 transactional emails, all company-branded:
+  1. Inquiry received → owner
+  2. Details form sent → client (with form link)
+  3. Contract sent → client (with signing link)
+  4. Contract signed → owner
+  5. Booking confirmed → client
+- All emails use: company name in FROM, brand color in gradients, footer with contact details
+- Created `getCompanyInfo()` helper + `CompanyInfo` type
+- Fixed `NEXT_PUBLIC_APP_URL` line break in generated links
 
-### Browser Testing (13 tests passed)
-- Login → Dashboard → Inquiries → Inquiry Detail → Pipeline
-- Public inquiry form submit → "Inquiry Submitted!"
-- Contract creation pre-fill → Contract preview → Send to client
-- Signing link → Public contract view → Signature pad → "Contract Signed!"
-- Auto-booking created with correct data
-- Dashboard stats: 1 booking, 1 inquiry, 1 contract, $5,000 revenue
-
-### Decisions
-- Combined two signup triggers into one (FK ordering)
-- Used admin client for dashboard stats (RLS issues with bookings)
-- Manual price only (no package-based pricing for v1)
-- Details form before contract (not optional)
-- Inquiry list buttons change based on status (details form vs contract)
-
-### Problems Encountered & Fixed
+### Bug Fixes
 - RLS self-referencing subquery → SECURITY DEFINER function
-- Supabase join `unknown` type in JSX → ternary instead of &&
-- Dashboard stats empty → switched to admin client
-- Two booking RLS policies conflicting → merged into one
-- Signing link breaking across lines → Input + Copy + Open buttons
-- Auto-booking price/date was wrong → extract from contract JSONB
-- Contract template fields not auto-filling → re-fill on client change
+- Missing intake_responses INSERT policy → added
+- Dashboard stats empty → admin client
+- Booking price/date/location wrong → extract from contract JSONB
+- Signing link breaking across lines → Input + Copy + Open
+- Email link line break → trim APP_URL
+- Two booking RLS policies conflicting → merged
+
+### Browser Testing (13+ tests passed end-to-end)
+- Login → Dashboard → Create Inquiry → Send Details Form → Send Contract → Client Signs → Booking Created → Stats Updated

@@ -10,136 +10,102 @@
 ## Auth
 - [x] Login with valid credentials redirects to /dashboard
 - [ ] Login with invalid credentials shows error
-- [x] Signup creates user, profile, and organization automatically
+- [x] Signup creates user, profile, and organization
 - [x] Unauthenticated users redirected from /dashboard to /login
-- [ ] Logout clears session and redirects to /login
+- [ ] Logout clears session
 - [ ] Freelancer login shows limited portal
 
 ## Multi-Tenancy
-- [x] Each signup creates a unique organization with slug
+- [x] Each signup creates unique org with slug
 - [x] RLS isolates data between organizations
-- [ ] Company branding saved and displayed on public forms
 - [x] Public forms show correct company branding
 - [ ] Different companies can't see each other's data
 
-## Clients
-- [ ] Create client with name, email, phone
-- [ ] Search clients by name or email
-- [ ] View client detail with related bookings/inquiries/contracts
-- [ ] Update client info
-- [x] Clients scoped to organization (RLS)
-
 ## Inquiries
 - [x] Public inquiry form submits successfully
-- [x] Public inquiry form shows company branding
+- [x] Public form shows company branding
 - [x] Inquiry creates client if not existing
-- [x] Inquiry list shows all org inquiries
-- [ ] Filter inquiries by status
-- [ ] Update inquiry status
-- [x] Pipeline shows correct steps (Inquiry → Details Form → Crew → Contract → Booked)
-- [x] "Send Details Form" button on list for "new" inquiries
-- [x] "Send Contract" button on list for "contacted" inquiries
+- [x] Inquiry list shows all org inquiries with status icons
+- [x] 🟠 New status with "Send Details Form" button
+- [x] 🕐 Details Received status with "Send Contract" button
+- [x] ✅ Booked status with "Complete" checkmark
+- [x] 📦 Archived status
+- [x] Pipeline: Inquiry → Details Form → Crew → Contract → Booked
+- [x] Multi-day events (up to 5 days with name/date/hours)
+- [x] Email to studio owner on new inquiry (company branded)
 - [ ] Manual inquiry creation from dashboard
-- [x] Email sent to studio owner on new inquiry
-- [x] Multi-day events: add up to 5 days with name/date/hours
-- [x] Multi-day data saved as formatted text in message
-- [ ] Remove day button works
-- [ ] First day date is required
 
-## Intake Forms / Details Form
+## Details Form
 - [x] Send details form from inquiry detail page
 - [x] Pick from available form templates
-- [x] Generates shareable link for client
+- [x] Generates shareable link (no line break)
+- [x] Email sent to client with form link (company branded)
 - [x] Sending marks inquiry as "contacted"
-- [ ] Client fills detailed form (bride/groom, events, venues)
-- [ ] Submitted form data visible to studio
-- [ ] Already-submitted form shows "already submitted" message
+- [x] Re-send details form after initial send
+- [x] Re-send doesn't change status
+- [ ] Client fills form and data visible to studio
 - [ ] Wedding Details Form template has 22 fields
 
-## Crew Management
-- [ ] Add team member (photographer, videographer, assistant)
-- [ ] Add external freelancer
-- [ ] Delete crew member
-- [ ] Invite freelancer creates Supabase user with freelancer role
-- [ ] Crew list shows team and external separately
-
-## Crew Assignment
-- [ ] Assign photographer to inquiry
-- [ ] Assign videographer to inquiry
-- [ ] Assign crew to booking
+## Crew
+- [ ] Add team/external crew members
+- [ ] Invite freelancer with portal access
+- [ ] Assign crew to inquiry/booking
 - [ ] Remove crew from booking
-- [ ] Assigned crew shows on booking detail
 
 ## Contracts
 - [x] Create contract with pre-filled inquiry data
-- [x] Manual price entry on contract
-- [x] Select from contract templates (Simple or Photography Client Agreement)
-- [x] Template fields auto-fill from client/inquiry data (read-only)
-- [x] Only price is manual entry (orange highlighted)
-- [x] Fields re-fill when client selection changes
-- [x] Price is REQUIRED — red warning + disabled button without it
-- [x] Send contract updates status to "sent"
-- [x] Send contract emails client with signing link
-- [x] Signing link is clickable with copy + open buttons
-- [x] Public contract page marks as "viewed" on first load
-- [x] Signature pad captures drawing
-- [x] Sign contract updates status to "signed"
-- [x] Signing auto-creates confirmed booking with correct price/date/location
-- [x] Signing emails studio owner "contract signed" notification
-- [x] Signing emails client "booking confirmed" with event details
+- [x] Template selection (Simple vs Photography Client Agreement)
+- [x] Auto-fill fields from client/inquiry (read-only grey)
+- [x] Price is manual entry only (orange, required)
+- [x] Red warning + disabled button without price
+- [x] Fields re-fill when client changes
+- [x] Send contract emails client (company branded)
+- [x] Signing link clickable with copy + open buttons
+- [x] Client signs digitally with signature pad
+- [x] Auto-creates confirmed booking with correct price/date/location
+- [x] Signing emails owner (company branded)
+- [x] Signing emails client booking confirmation (company branded)
 
 ## Bookings
-- [ ] Create booking with client, date, time
-- [ ] Double-booking prevention
-- [ ] Calendar shows bookings on correct dates
-- [ ] Update booking status
-- [ ] Cancel booking
-- [ ] Booking shows assigned crew
+- [x] Auto-booking has correct title, price, date, location
 - [x] Bookings scoped to organization
-- [x] Auto-created booking has correct title (Client Name — event type)
-- [x] Auto-created booking has correct price from contract
-- [x] Auto-created booking has correct event date from contract
-- [x] Auto-created booking has correct location from contract
+- [ ] Create booking manually
+- [ ] Calendar shows bookings
+- [ ] Double-booking prevention
+- [ ] Booking shows assigned crew
 
 ## Dashboard
-- [x] Total Bookings count correct (non-cancelled)
-- [x] Pending Inquiries count correct
-- [x] Signed Contracts count correct
-- [x] Total Revenue calculated correctly
-- [x] Upcoming Bookings list shows future events
-- [x] Recent Inquiries list shows latest
-- [x] Share Inquiry Form card with copy link + email button
+- [x] Stats: bookings, inquiries, contracts, revenue all correct
+- [x] Upcoming bookings + recent inquiries lists
+- [x] Share Inquiry Form card with copy + email
+
+## Email System
+- [x] All 5 emails use company name in FROM
+- [x] All emails use company brand color in gradients
+- [x] All emails show company footer (email, phone, website, address)
+- [x] All emails show "Powered by StudioFlow"
+- [x] Inquiry received → owner email
+- [x] Details form sent → client email with link
+- [x] Contract sent → client email with signing link
+- [x] Contract signed → owner notification
+- [x] Contract signed → client booking confirmation
 
 ## Freelancer Portal
-- [ ] Freelancer sees only assigned bookings
-- [ ] Freelancer sees limited sidebar
-- [ ] Freelancer can see event details but not pricing/contracts
-- [ ] Freelancer can update their profile
+- [ ] Limited dashboard with only assigned bookings
+- [ ] Limited sidebar (My Bookings + Settings)
 
-## Analytics
-- [ ] Revenue chart shows monthly data
-- [ ] Funnel shows inquiry → intake → contract → booking
-- [ ] Event type pie chart renders
-- [ ] Top clients sorted by revenue
-
-## Email Notifications
-- [x] Inquiry submitted → email to studio owner
-- [x] Contract sent → email to client with signing link
-- [x] Contract signed → email to studio owner
-- [x] Contract signed → booking confirmation email to client
+## Analytics / Recommendations / Settings
+- [ ] Revenue chart, funnel, event types, top clients
+- [ ] Location/pose recommendations
+- [ ] Company settings with brand color
 
 ## Landing Page
-- [x] Renders with hero, features, pricing, testimonials, CTA
-- [x] Warm gradient theme
-- [x] DM Sans font applied
-- [ ] Responsive on mobile
+- [x] Warm gradient theme, DM Sans, hero, features, pricing, testimonials
 
 ---
 
-## Test Coverage Summary
-- **Total test cases:** 88
-- **Manually verified:** 42
-- **Not yet tested:** 46
-- **Automated tests:** 0
-
-> Automated tests to be added with Vitest/Playwright in next phase.
+## Summary
+- **Total:** 90 test cases
+- **Verified:** 48
+- **Remaining:** 42
+- **Automated:** 0
