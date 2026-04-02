@@ -1,6 +1,6 @@
 import { getInquiry, updateInquiryStatus } from "@/actions/inquiries";
 import { getCrewMembers } from "@/actions/crew";
-import { getIntakeForms, sendIntakeForm } from "@/actions/intake-forms";
+import { getIntakeForms, getExistingIntakeLink } from "@/actions/intake-forms";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -17,10 +17,11 @@ export default async function InquiryDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [inquiry, crew, intakeForms] = await Promise.all([
+  const [inquiry, crew, intakeForms, existingLink] = await Promise.all([
     getInquiry(id),
     getCrewMembers(),
     getIntakeForms(),
+    getExistingIntakeLink(id),
   ]);
 
   if (!inquiry) notFound();
@@ -213,6 +214,7 @@ export default async function InquiryDetailPage({
               inquiryId={id}
               clientId={inquiry.client_id || ""}
               intakeForms={intakeForms}
+              existingLink={existingLink}
               resend={inquiry.status !== "new"}
             />
           </CardContent>

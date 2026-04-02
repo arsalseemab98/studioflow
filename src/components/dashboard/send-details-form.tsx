@@ -5,13 +5,15 @@ import { sendIntakeForm, emailIntakeFormLink } from "@/actions/intake-forms";
 import { updateInquiryStatus } from "@/actions/inquiries";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Copy, Check, Send, ClipboardList, Mail, ExternalLink } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Copy, Check, Send, ClipboardList, Mail, ExternalLink, CheckCircle2 } from "lucide-react";
 
 interface SendDetailsFormProps {
   inquiryId: string;
   clientId: string;
   intakeForms: Record<string, unknown>[];
   resend?: boolean;
+  existingLink?: { link: string; formId: string; submitted: boolean } | null;
 }
 
 export function SendDetailsForm({
@@ -19,15 +21,17 @@ export function SendDetailsForm({
   clientId,
   intakeForms,
   resend = false,
+  existingLink = null,
 }: SendDetailsFormProps) {
-  const [selectedForm, setSelectedForm] = useState<string>("");
-  const [link, setLink] = useState<string>("");
+  const [selectedForm, setSelectedForm] = useState<string>(existingLink?.formId || "");
+  const [link, setLink] = useState<string>(existingLink?.link || "");
   const [sending, setSending] = useState(false);
-  const [sent, setSent] = useState(false);
+  const [hasLink, setHasLink] = useState(!!existingLink?.link);
   const [copied, setCopied] = useState(false);
   const [emailing, setEmailing] = useState(false);
   const [emailed, setEmailed] = useState(false);
   const [emailedTo, setEmailedTo] = useState("");
+  const [isSubmitted, setIsSubmitted] = useState(existingLink?.submitted || false);
 
   async function handleCreate() {
     if (!selectedForm) return;
@@ -36,7 +40,9 @@ export function SendDetailsForm({
     const result = await sendIntakeForm(selectedForm, inquiryId, clientId);
     if (result.success && result.link) {
       setLink(result.link);
-      setSent(true);
+      setHasLink(true);
+      setIsSubmitted(false);
+      setEmailed(false);
       if (!resend) {
         await updateInquiryStatus(inquiryId, "contacted");
       }
@@ -62,13 +68,23 @@ export function SendDetailsForm({
     setTimeout(() => setCopied(false), 2000);
   }
 
-  if (sent && link) {
+  // Show existing or just-created link
+  if (hasLink && link) {
     return (
       <div className="space-y-4">
-        <div className="flex items-center gap-2 text-green-600">
-          <Check className="h-4 w-4" />
-          <p className="text-sm font-medium">Details form link created!</p>
-        </div>
+        {/* Status */}
+        {isSubmitted ? (
+          <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
+            <CheckCircle2 className="h-4 w-4 text-green-500" />
+            <p className="text-sm text-green-700 font-medium">Client has filled out this form</p>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <Badge variant="secondary" className="bg-orange-50 text-orange-600 border-orange-200">
+              Waiting for client to fill
+            </Badge>
+          </div>
+        )}
 
         {/* Link with copy + open */}
         <div className="flex items-center gap-2">
@@ -83,7 +99,7 @@ export function SendDetailsForm({
           </a>
         </div>
 
-        {/* Send via email button */}
+        {/* Send via email */}
         {emailed ? (
           <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
             <Check className="h-4 w-4 text-green-500" />
@@ -109,13 +125,18 @@ export function SendDetailsForm({
           </Button>
         )}
 
-        <p className="text-xs text-zinc-400">
-          Copy the link to share manually, or send it via email.
-        </p>
+        {/* Create new link option */}
+        <button
+          onClick={() => { setHasLink(false); setLink(""); setEmailed(false); }}
+          className="text-xs text-zinc-400 hover:text-zinc-600 underline"
+        >
+          Create a new form link instead
+        </button>
       </div>
     );
   }
 
+  // Form picker + create button
   return (
     <div className="space-y-3">
       {intakeForms.length === 0 ? (

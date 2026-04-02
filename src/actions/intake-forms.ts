@@ -60,6 +60,26 @@ export async function updateIntakeForm(id: string, name: string, fields: IntakeF
   return { success: true };
 }
 
+export async function getExistingIntakeLink(inquiryId: string) {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("intake_responses")
+    .select("access_token, form_id, submitted_at")
+    .eq("inquiry_id", inquiryId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .single();
+
+  if (!data) return null;
+
+  const appUrl = (process.env.NEXT_PUBLIC_APP_URL || "").trim();
+  return {
+    link: `${appUrl}/form/${data.access_token}`,
+    formId: data.form_id,
+    submitted: !!data.submitted_at,
+  };
+}
+
 export async function sendIntakeForm(formId: string, inquiryId: string, clientId: string) {
   const supabase = await createClient();
 
