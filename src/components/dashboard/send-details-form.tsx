@@ -55,7 +55,7 @@ export function SendDetailsForm({
       <div className="space-y-3">
         <div className="flex items-center gap-2 text-green-600">
           <Check className="h-4 w-4" />
-          <p className="text-sm font-medium">Details form created! Send this link to the client:</p>
+          <p className="text-sm font-medium">Details form created & email sent to client!</p>
         </div>
         <div className="flex items-center gap-2">
           <Input value={link} readOnly className="font-mono text-xs" />
@@ -67,7 +67,7 @@ export function SendDetailsForm({
           </a>
         </div>
         <p className="text-xs text-zinc-400">
-          Once the client fills this form, come back here to review their answers and send the contract.
+          The client received an email with this link. You can also copy and share it manually.
         </p>
       </div>
     );
