@@ -61,7 +61,6 @@ export async function updateIntakeForm(id: string, name: string, fields: IntakeF
 }
 
 export async function sendIntakeForm(formId: string, inquiryId: string, clientId: string) {
-  const userData = await getUser();
   const supabase = await createClient();
 
   const { data, error } = await supabase
@@ -79,7 +78,13 @@ export async function sendIntakeForm(formId: string, inquiryId: string, clientId
   const appUrl = (process.env.NEXT_PUBLIC_APP_URL || "").trim();
   const link = `${appUrl}/form/${data.access_token}`;
 
-  // Send email to client with form link
+  return { success: true, link };
+}
+
+export async function emailIntakeFormLink(formId: string, clientId: string, link: string) {
+  const userData = await getUser();
+  if (!userData?.orgId) return { error: "Not authenticated" };
+
   const admin = createAdminClient();
   const { data: client } = await admin
     .from("clients")
@@ -93,18 +98,19 @@ export async function sendIntakeForm(formId: string, inquiryId: string, clientId
     .eq("id", formId)
     .single();
 
-  if (client?.email && userData?.orgId) {
-    const company = await getCompanyInfo(userData.orgId);
-    const template = detailsFormEmail({
-      company,
-      clientName: client.name,
-      formName: form?.name || "event details form",
-      formLink: link,
-    });
-    await sendEmail({ to: client.email, company, ...template });
-  }
+  if (!client?.email) return { error: "Client has no email address" };
 
-  return { success: true, link };
+  const company = await getCompanyInfo(userData.orgId);
+  const template = detailsFormEmail({
+    company,
+    clientName: client.name,
+    formName: form?.name || "event details form",
+    formLink: link,
+  });
+  const result = await sendEmail({ to: client.email, company, ...template });
+
+  if (result.error) return { error: result.error };
+  return { success: true, email: client.email };
 }
 
 export async function getIntakeFormByToken(token: string) {
